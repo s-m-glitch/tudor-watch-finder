@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tudor Watch Finder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #991b1b;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-4xl mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Tudor Watch Finder</h1>
+            <p class="text-gray-600">Find the Tudor Ranger 36mm with Beige Dial near you</p>
+        </header>
+
+        <!-- Watch Info Card -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex items-center gap-6">
+                <div class="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                        <path stroke-width="2" d="M12 6v6l4 2"/>
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-900">Tudor Ranger</h2>
+                    <p class="text-gray-600">Reference: M79930-0007</p>
+                    <p class="text-gray-600">36mm Steel Case</p>
+                    <p class="text-gray-600">Beige Domed Dial</p>
+                    <p class="text-2xl font-bold text-red-800 mt-2">$3,775</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Form -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Search Nearby Retailers</h3>
+            <form id="searchForm" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Zip Code</label>
+                        <input type="text" id="zipCode" value="94117" maxlength="5" pattern="[0-9]{5}"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Radius (miles)</label>
+                        <select id="radius" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
+                            <option value="25">25 miles</option>
+                            <option value="50" selected>50 miles</option>
+                            <option value="100">100 miles</option>
+                            <option value="200">200 miles</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" id="searchBtn"
+                    class="w-full bg-red-800 text-white py-2 px-4 rounded-md hover:bg-red-900 transition font-medium">
+                    Search Retailers
+                </button>
+            </form>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="hidden">
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">
+                        <span id="resultCount">0</span> Retailers Found
+                    </h3>
+                    <span id="phoneCount" class="text-sm text-gray-500"></span>
+                </div>
+                <div id="retailerList" class="space-y-3 max-h-96 overflow-y-auto"></div>
+            </div>
+
+            <!-- Call Section -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Check Inventory via Phone</h3>
+                <p class="text-sm text-gray-600 mb-4">
+                    Use Bland AI to automatically call stores and ask about availability.
+                </p>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Bland AI API Key</label>
+                        <input type="password" id="apiKey" placeholder="org_..."
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Max Calls</label>
+                        <select id="maxCalls" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            <option value="3">3 calls</option>
+                            <option value="5" selected>5 calls</option>
+                            <option value="10">10 calls</option>
+                        </select>
+                    </div>
+                    <button id="callBtn" disabled
+                        class="w-full bg-green-700 text-white py-2 px-4 rounded-md hover:bg-green-800 transition font-medium disabled:bg-gray-400 disabled:cursor-not-allowed">
+                        Start Calling Retailers
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Call Progress Section -->
+        <div id="callProgress" class="hidden bg-white rounded-lg shadow-md p-6 mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                <span class="loader mr-2"></span>
+                Calling Retailers...
+            </h3>
+            <div class="mb-4">
+                <div class="flex justify-between text-sm text-gray-600 mb-1">
+                    <span>Progress</span>
+                    <span id="callProgressText">0 / 0</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div id="callProgressBar" class="bg-green-600 h-2 rounded-full transition-all" style="width: 0%"></div>
+                </div>
+            </div>
+            <p id="currentCall" class="text-sm text-gray-600"></p>
+        </div>
+
+        <!-- Call Results Section -->
+        <div id="callResults" class="hidden bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Inventory Check Results</h3>
+            <div id="callResultsList" class="space-y-3"></div>
+            <div id="callSummary" class="mt-4 p-4 bg-gray-50 rounded-md"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '';  // Same origin
+
+        // DOM elements
+        const searchForm = document.getElementById('searchForm');
+        const searchBtn = document.getElementById('searchBtn');
+        const resultsSection = document.getElementById('resultsSection');
+        const retailerList = document.getElementById('retailerList');
+        const resultCount = document.getElementById('resultCount');
+        const phoneCount = document.getElementById('phoneCount');
+        const callBtn = document.getElementById('callBtn');
+        const apiKeyInput = document.getElementById('apiKey');
+        const callProgress = document.getElementById('callProgress');
+        const callResults = document.getElementById('callResults');
+
+        let currentRetailers = [];
+
+        // Search retailers
+        searchForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const zipCode = document.getElementById('zipCode').value;
+            const radius = document.getElementById('radius').value;
+
+            searchBtn.disabled = true;
+            searchBtn.innerHTML = '<span class="loader mr-2"></span> Searching...';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/search`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ zip_code: zipCode, radius_miles: parseFloat(radius) })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Search failed');
+                }
+
+                const data = await response.json();
+                currentRetailers = data.retailers;
+                displayRetailers(data);
+                resultsSection.classList.remove('hidden');
+
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                searchBtn.disabled = false;
+                searchBtn.textContent = 'Search Retailers';
+            }
+        });
+
+        // Display retailers
+        function displayRetailers(data) {
+            resultCount.textContent = data.total_retailers;
+            phoneCount.textContent = `${data.with_phone} with phone numbers`;
+
+            retailerList.innerHTML = data.retailers.map((r, i) => `
+                <div class="border border-gray-200 rounded-md p-3 ${r.has_phone ? '' : 'opacity-60'}">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="font-medium text-gray-900">${r.name}</h4>
+                            <p class="text-sm text-gray-600">${r.address || `${r.city}, ${r.state}`}</p>
+                            <p class="text-sm ${r.has_phone ? 'text-green-700' : 'text-gray-400'}">
+                                ${r.has_phone ? r.phone : 'No phone available'}
+                            </p>
+                        </div>
+                        <span class="text-sm text-gray-500">${r.distance_miles} mi</span>
+                    </div>
+                </div>
+            `).join('');
+
+            // Enable call button if we have retailers with phones
+            callBtn.disabled = data.with_phone === 0;
+        }
+
+        // Enable call button when API key is entered
+        apiKeyInput.addEventListener('input', () => {
+            callBtn.disabled = !apiKeyInput.value || currentRetailers.length === 0;
+        });
+
+        // Start phone calls
+        callBtn.addEventListener('click', async () => {
+            const apiKey = apiKeyInput.value;
+            const maxCalls = parseInt(document.getElementById('maxCalls').value);
+            const zipCode = document.getElementById('zipCode').value;
+            const radius = document.getElementById('radius').value;
+
+            if (!apiKey) {
+                alert('Please enter your Bland AI API key');
+                return;
+            }
+
+            if (!confirm(`This will make up to ${maxCalls} phone calls using your Bland AI credits. Continue?`)) {
+                return;
+            }
+
+            callBtn.disabled = true;
+            callProgress.classList.remove('hidden');
+            callResults.classList.add('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE}/api/call`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        zip_code: zipCode,
+                        radius_miles: parseFloat(radius),
+                        api_key: apiKey,
+                        max_calls: maxCalls
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to start calls');
+                }
+
+                const data = await response.json();
+                pollCallStatus(data.job_id);
+
+            } catch (error) {
+                alert('Error: ' + error.message);
+                callProgress.classList.add('hidden');
+                callBtn.disabled = false;
+            }
+        });
+
+        // Poll call status
+        async function pollCallStatus(jobId) {
+            const progressBar = document.getElementById('callProgressBar');
+            const progressText = document.getElementById('callProgressText');
+            const currentCall = document.getElementById('currentCall');
+
+            const poll = async () => {
+                try {
+                    const response = await fetch(`${API_BASE}/api/call/${jobId}`);
+                    const data = await response.json();
+
+                    const percent = (data.completed / data.total) * 100;
+                    progressBar.style.width = `${percent}%`;
+                    progressText.textContent = `${data.completed} / ${data.total}`;
+
+                    if (data.current) {
+                        currentCall.textContent = `Calling: ${data.current}`;
+                    }
+
+                    if (data.status === 'completed') {
+                        displayCallResults(data);
+                        callProgress.classList.add('hidden');
+                        callResults.classList.remove('hidden');
+                        callBtn.disabled = false;
+                    } else if (data.status === 'failed') {
+                        alert('Call job failed: ' + data.error);
+                        callProgress.classList.add('hidden');
+                        callBtn.disabled = false;
+                    } else {
+                        setTimeout(poll, 3000);
+                    }
+                } catch (error) {
+                    console.error('Poll error:', error);
+                    setTimeout(poll, 5000);
+                }
+            };
+
+            poll();
+        }
+
+        // Display call results
+        function displayCallResults(data) {
+            const statusIcons = {
+                'in_stock': { icon: '✅', label: 'In Stock', class: 'bg-green-100 text-green-800' },
+                'out_of_stock': { icon: '❌', label: 'Out of Stock', class: 'bg-red-100 text-red-800' },
+                'can_order': { icon: '📦', label: 'Can Order', class: 'bg-blue-100 text-blue-800' },
+                'waitlist': { icon: '📋', label: 'Waitlist', class: 'bg-yellow-100 text-yellow-800' },
+                'no_answer': { icon: '📵', label: 'No Answer', class: 'bg-gray-100 text-gray-800' },
+                'call_failed': { icon: '⚠️', label: 'Failed', class: 'bg-gray-100 text-gray-800' },
+                'unknown': { icon: '❓', label: 'Unknown', class: 'bg-gray-100 text-gray-800' }
+            };
+
+            const resultsList = document.getElementById('callResultsList');
+            resultsList.innerHTML = data.results.map(r => {
+                const status = statusIcons[r.status] || statusIcons['unknown'];
+                return `
+                    <div class="border border-gray-200 rounded-md p-3">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-medium text-gray-900">${r.retailer_name}</h4>
+                                <p class="text-sm text-gray-600">${r.phone} • ${r.distance} mi</p>
+                                ${r.summary ? `<p class="text-sm text-gray-500 mt-1">${r.summary}</p>` : ''}
+                            </div>
+                            <span class="px-2 py-1 rounded text-sm ${status.class}">
+                                ${status.icon} ${status.label}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Summary
+            const summary = document.getElementById('callSummary');
+            if (data.summary && data.summary.in_stock > 0) {
+                summary.innerHTML = `
+                    <div class="text-center">
+                        <p class="text-2xl mb-2">🎉</p>
+                        <p class="font-semibold text-green-800">Watch found in stock at ${data.summary.in_stock} retailer(s)!</p>
+                        <div class="mt-2">
+                            ${data.summary.in_stock_retailers.map(r => `
+                                <p class="text-gray-700">${r.retailer_name}: ${r.phone}</p>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            } else {
+                summary.innerHTML = `
+                    <div class="text-center text-gray-600">
+                        <p>Watch not found in stock at the retailers called.</p>
+                        <p class="text-sm mt-1">Try expanding your search radius or calling more retailers.</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
