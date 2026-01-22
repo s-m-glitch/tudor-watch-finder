@@ -4,149 +4,657 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tudor Watch Finder</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        .loader {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #991b1b;
-            border-radius: 50%;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+            min-height: 100vh;
+            color: #1a1a1a;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1rem;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+            padding: 32px;
+            margin-bottom: 24px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+        }
+
+        /* Watch Hero */
+        .watch-hero {
+            display: flex;
+            align-items: center;
+            gap: 40px;
+        }
+
+        .watch-image {
+            flex-shrink: 0;
+            width: 200px;
+            height: 200px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .watch-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .watch-details h2 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+
+        .watch-details .reference {
+            font-size: 0.875rem;
+            color: #888;
+            margin-bottom: 16px;
+            font-family: monospace;
+        }
+
+        .watch-specs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .spec-tag {
+            background: #f1f3f4;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: #555;
+        }
+
+        .watch-price {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #991b1b;
+        }
+
+        /* Search Form */
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 20px;
+        }
+
+        .search-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #666;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 14px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            background: white;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #991b1b;
+            box-shadow: 0 0 0 3px rgba(153, 27, 27, 0.1);
+        }
+
+        .btn {
+            padding: 14px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #991b1b;
+            color: white;
+            grid-column: span 2;
+            margin-top: 8px;
+        }
+
+        .btn-primary:hover {
+            background: #7f1d1d;
+            transform: translateY(-1px);
+        }
+
+        .btn-primary:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #065f46;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #064e3b;
+        }
+
+        .btn-secondary:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+        }
+
+        /* Results */
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .results-count {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .results-meta {
+            font-size: 0.875rem;
+            color: #666;
+        }
+
+        .retailer-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .retailer-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 16px;
+            background: #f9fafb;
+            border-radius: 10px;
+            transition: background 0.2s ease;
+        }
+
+        .retailer-card:hover {
+            background: #f3f4f6;
+        }
+
+        .retailer-card.no-phone {
+            opacity: 0.5;
+        }
+
+        .retailer-info h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+
+        .retailer-info .address {
+            font-size: 0.875rem;
+            color: #666;
+            margin-bottom: 6px;
+        }
+
+        .retailer-info .phone {
+            font-size: 0.9rem;
+            color: #065f46;
+            font-weight: 500;
+            text-decoration: none;
+        }
+
+        .retailer-info .phone:hover {
+            text-decoration: underline;
+        }
+
+        .retailer-info .no-phone-text {
+            font-size: 0.875rem;
+            color: #9ca3af;
+        }
+
+        .retailer-distance {
+            font-size: 0.875rem;
+            color: #666;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        /* Call Section */
+        .call-section {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .call-form {
+            display: grid;
+            grid-template-columns: 1fr 140px;
+            gap: 16px;
+            align-items: end;
+        }
+
+        .call-form .btn {
+            height: 50px;
+        }
+
+        /* Progress */
+        .progress-card {
+            background: #fefce8;
+            border: 1px solid #fef08a;
+        }
+
+        .progress-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .progress-header h3 {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .spinner {
             width: 20px;
             height: 20px;
+            border: 2px solid #fef08a;
+            border-top-color: #ca8a04;
+            border-radius: 50%;
             animation: spin 1s linear infinite;
-            display: inline-block;
         }
+
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .progress-bar-container {
+            background: #fef9c3;
+            border-radius: 8px;
+            height: 8px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .progress-bar {
+            background: #ca8a04;
+            height: 100%;
+            border-radius: 8px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.875rem;
+            color: #713f12;
+        }
+
+        /* Results Status */
+        .result-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 16px;
+            background: #f9fafb;
+            border-radius: 10px;
+            margin-bottom: 12px;
+        }
+
+        .result-info h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .result-info .meta {
+            font-size: 0.875rem;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .result-info .summary {
+            font-size: 0.875rem;
+            color: #444;
+            line-height: 1.5;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .status-in_stock { background: #dcfce7; color: #166534; }
+        .status-out_of_stock { background: #fee2e2; color: #991b1b; }
+        .status-waitlist { background: #fef3c7; color: #92400e; }
+        .status-can_order { background: #dbeafe; color: #1e40af; }
+        .status-no_answer { background: #f3f4f6; color: #4b5563; }
+        .status-call_failed { background: #f3f4f6; color: #4b5563; }
+        .status-unknown { background: #f3f4f6; color: #4b5563; }
+
+        /* Summary Box */
+        .summary-box {
+            margin-top: 24px;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .summary-box.success {
+            background: #dcfce7;
+        }
+
+        .summary-box.empty {
+            background: #f3f4f6;
+        }
+
+        .summary-box .emoji {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+
+        .summary-box h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .summary-box p {
+            font-size: 0.875rem;
+            color: #666;
+        }
+
+        .summary-box .retailer-result {
+            margin-top: 8px;
+            font-weight: 500;
+        }
+
+        /* Skeleton Loading */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: skeleton-loading 1.5s infinite;
+            border-radius: 8px;
+        }
+
+        @keyframes skeleton-loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .skeleton-card {
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .skeleton-line {
+            height: 16px;
+            margin-bottom: 8px;
+        }
+
+        .skeleton-line.short { width: 40%; }
+        .skeleton-line.medium { width: 70%; }
+        .skeleton-line.long { width: 100%; }
+
+        /* Hidden */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .container {
+                padding: 20px 16px;
+            }
+
+            .watch-hero {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .watch-image {
+                width: 160px;
+                height: 160px;
+            }
+
+            .watch-specs {
+                justify-content: center;
+            }
+
+            .search-form {
+                grid-template-columns: 1fr;
+            }
+
+            .btn-primary {
+                grid-column: span 1;
+            }
+
+            .call-form {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <div class="max-w-4xl mx-auto px-4 py-8">
+<body>
+    <div class="container">
         <!-- Header -->
-        <header class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">Tudor Watch Finder</h1>
-            <p class="text-gray-600">Find the Tudor Ranger 36mm with Beige Dial near you</p>
+        <header class="header">
+            <h1>Tudor Watch Finder</h1>
+            <p>Find your watch at nearby authorized retailers</p>
         </header>
 
-        <!-- Watch Info Card -->
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <div class="flex items-center gap-6">
-                <div class="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10" stroke-width="2"/>
-                        <path stroke-width="2" d="M12 6v6l4 2"/>
-                    </svg>
+        <!-- Watch Hero Card -->
+        <div class="card">
+            <div class="watch-hero">
+                <div class="watch-image">
+                    <img src="https://www.tudorwatch.com/-/media/catalog/product/m/7/m79930-0007_black_primary.png?w=780&h=780&q=90"
+                         alt="Tudor Ranger 36mm with Beige Dial"
+                         onerror="this.onerror=null; this.src='https://www.tudorwatch.com/static/images/placeholder-watch.png';">
                 </div>
-                <div>
-                    <h2 class="text-xl font-semibold text-gray-900">Tudor Ranger</h2>
-                    <p class="text-gray-600">Reference: M79930-0007</p>
-                    <p class="text-gray-600">36mm Steel Case</p>
-                    <p class="text-gray-600">Beige Domed Dial</p>
-                    <p class="text-2xl font-bold text-red-800 mt-2">$3,775</p>
+                <div class="watch-details">
+                    <h2>Tudor Ranger</h2>
+                    <p class="reference">M79930-0007</p>
+                    <div class="watch-specs">
+                        <span class="spec-tag">36mm</span>
+                        <span class="spec-tag">Steel Case</span>
+                        <span class="spec-tag">Beige Domed Dial</span>
+                    </div>
+                    <p class="watch-price">$3,775</p>
                 </div>
             </div>
         </div>
 
-        <!-- Search Form -->
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Search Nearby Retailers</h3>
-            <form id="searchForm" class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Zip Code</label>
-                        <input type="text" id="zipCode" value="94117" maxlength="5" pattern="[0-9]{5}"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Radius (miles)</label>
-                        <select id="radius" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
-                            <option value="25">25 miles</option>
-                            <option value="50" selected>50 miles</option>
-                            <option value="100">100 miles</option>
-                            <option value="200">200 miles</option>
-                        </select>
-                    </div>
+        <!-- Search Card -->
+        <div class="card">
+            <h3 class="section-title">Search Nearby Retailers</h3>
+            <form id="searchForm" class="search-form">
+                <div class="form-group">
+                    <label for="zipCode">Zip Code</label>
+                    <input type="text" id="zipCode" value="94117" maxlength="5" pattern="[0-9]{5}" placeholder="Enter zip code">
                 </div>
-                <button type="submit" id="searchBtn"
-                    class="w-full bg-red-800 text-white py-2 px-4 rounded-md hover:bg-red-900 transition font-medium">
+                <div class="form-group">
+                    <label for="radius">Radius</label>
+                    <select id="radius">
+                        <option value="25">25 miles</option>
+                        <option value="50" selected>50 miles</option>
+                        <option value="100">100 miles</option>
+                        <option value="200">200 miles</option>
+                    </select>
+                </div>
+                <button type="submit" id="searchBtn" class="btn btn-primary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
                     Search Retailers
                 </button>
             </form>
         </div>
 
-        <!-- Results Section -->
-        <div id="resultsSection" class="hidden">
-            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-semibold text-gray-900">
-                        <span id="resultCount">0</span> Retailers Found
-                    </h3>
-                    <span id="phoneCount" class="text-sm text-gray-500"></span>
-                </div>
-                <div id="retailerList" class="space-y-3 max-h-96 overflow-y-auto"></div>
+        <!-- Loading Skeleton -->
+        <div id="loadingSkeleton" class="card hidden">
+            <div class="skeleton-card">
+                <div class="skeleton skeleton-line long"></div>
+                <div class="skeleton skeleton-line medium"></div>
+                <div class="skeleton skeleton-line short"></div>
             </div>
+            <div class="skeleton-card">
+                <div class="skeleton skeleton-line long"></div>
+                <div class="skeleton skeleton-line medium"></div>
+                <div class="skeleton skeleton-line short"></div>
+            </div>
+            <div class="skeleton-card">
+                <div class="skeleton skeleton-line long"></div>
+                <div class="skeleton skeleton-line medium"></div>
+                <div class="skeleton skeleton-line short"></div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="card hidden">
+            <div class="results-header">
+                <span class="results-count"><span id="resultCount">0</span> Retailers Found</span>
+                <span class="results-meta" id="phoneCount"></span>
+            </div>
+            <div id="retailerList" class="retailer-list"></div>
 
             <!-- Call Section -->
-            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Check Inventory via Phone</h3>
-                <p class="text-sm text-gray-600 mb-4">
-                    Use Bland AI to automatically call stores and ask about availability.
+            <div class="call-section">
+                <h3 class="section-title">Check Inventory via Phone</h3>
+                <p style="font-size: 0.875rem; color: #666; margin-bottom: 16px;">
+                    Automatically call stores to ask about availability using AI.
                 </p>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Bland AI API Key</label>
-                        <input type="password" id="apiKey" placeholder="org_..."
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
+                <div class="call-form">
+                    <div class="form-group">
+                        <label for="apiKey">Bland AI API Key</label>
+                        <input type="password" id="apiKey" placeholder="org_...">
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Max Calls</label>
-                        <select id="maxCalls" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    <div class="form-group">
+                        <label for="maxCalls">Max Calls</label>
+                        <select id="maxCalls">
                             <option value="3">3 calls</option>
                             <option value="5" selected>5 calls</option>
                             <option value="10">10 calls</option>
                         </select>
                     </div>
-                    <button id="callBtn" disabled
-                        class="w-full bg-green-700 text-white py-2 px-4 rounded-md hover:bg-green-800 transition font-medium disabled:bg-gray-400 disabled:cursor-not-allowed">
-                        Start Calling Retailers
-                    </button>
                 </div>
+                <button id="callBtn" class="btn btn-secondary" style="width: 100%; margin-top: 16px;" disabled>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                    </svg>
+                    Start Calling Retailers
+                </button>
             </div>
         </div>
 
-        <!-- Call Progress Section -->
-        <div id="callProgress" class="hidden bg-white rounded-lg shadow-md p-6 mb-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                <span class="loader mr-2"></span>
-                Calling Retailers...
-            </h3>
-            <div class="mb-4">
-                <div class="flex justify-between text-sm text-gray-600 mb-1">
-                    <span>Progress</span>
-                    <span id="callProgressText">0 / 0</span>
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-2">
-                    <div id="callProgressBar" class="bg-green-600 h-2 rounded-full transition-all" style="width: 0%"></div>
-                </div>
+        <!-- Call Progress -->
+        <div id="callProgress" class="card progress-card hidden">
+            <div class="progress-header">
+                <div class="spinner"></div>
+                <h3>Calling Retailers...</h3>
             </div>
-            <p id="currentCall" class="text-sm text-gray-600"></p>
+            <div class="progress-bar-container">
+                <div id="callProgressBar" class="progress-bar" style="width: 0%"></div>
+            </div>
+            <div class="progress-text">
+                <span id="currentCall">Starting...</span>
+                <span id="callProgressText">0 / 0</span>
+            </div>
         </div>
 
-        <!-- Call Results Section -->
-        <div id="callResults" class="hidden bg-white rounded-lg shadow-md p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Inventory Check Results</h3>
-            <div id="callResultsList" class="space-y-3"></div>
-            <div id="callSummary" class="mt-4 p-4 bg-gray-50 rounded-md"></div>
+        <!-- Call Results -->
+        <div id="callResults" class="card hidden">
+            <h3 class="section-title">Inventory Check Results</h3>
+            <div id="callResultsList"></div>
+            <div id="callSummary"></div>
         </div>
     </div>
 
     <script>
-        const API_BASE = '';  // Same origin
+        const API_BASE = '';
 
         // DOM elements
         const searchForm = document.getElementById('searchForm');
         const searchBtn = document.getElementById('searchBtn');
+        const loadingSkeleton = document.getElementById('loadingSkeleton');
         const resultsSection = document.getElementById('resultsSection');
         const retailerList = document.getElementById('retailerList');
         const resultCount = document.getElementById('resultCount');
@@ -165,7 +673,13 @@
             const radius = document.getElementById('radius').value;
 
             searchBtn.disabled = true;
-            searchBtn.innerHTML = '<span class="loader mr-2"></span> Searching...';
+            searchBtn.innerHTML = `
+                <div class="spinner" style="width: 18px; height: 18px; border-color: rgba(255,255,255,0.3); border-top-color: white;"></div>
+                Searching...
+            `;
+            loadingSkeleton.classList.remove('hidden');
+            resultsSection.classList.add('hidden');
+            callResults.classList.add('hidden');
 
             try {
                 const response = await fetch(`${API_BASE}/api/search`, {
@@ -182,13 +696,21 @@
                 const data = await response.json();
                 currentRetailers = data.retailers;
                 displayRetailers(data);
+                loadingSkeleton.classList.add('hidden');
                 resultsSection.classList.remove('hidden');
 
             } catch (error) {
                 alert('Error: ' + error.message);
+                loadingSkeleton.classList.add('hidden');
             } finally {
                 searchBtn.disabled = false;
-                searchBtn.textContent = 'Search Retailers';
+                searchBtn.innerHTML = `
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    Search Retailers
+                `;
             }
         });
 
@@ -197,23 +719,31 @@
             resultCount.textContent = data.total_retailers;
             phoneCount.textContent = `${data.with_phone} with phone numbers`;
 
-            retailerList.innerHTML = data.retailers.map((r, i) => `
-                <div class="border border-gray-200 rounded-md p-3 ${r.has_phone ? '' : 'opacity-60'}">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h4 class="font-medium text-gray-900">${r.name}</h4>
-                            <p class="text-sm text-gray-600">${r.address || `${r.city}, ${r.state}`}</p>
-                            <p class="text-sm ${r.has_phone ? 'text-green-700' : 'text-gray-400'}">
-                                ${r.has_phone ? r.phone : 'No phone available'}
-                            </p>
-                        </div>
-                        <span class="text-sm text-gray-500">${r.distance_miles} mi</span>
+            retailerList.innerHTML = data.retailers.map(r => `
+                <div class="retailer-card ${r.has_phone ? '' : 'no-phone'}">
+                    <div class="retailer-info">
+                        <h4>${r.name}</h4>
+                        <p class="address">${r.address || `${r.city}, ${r.state}`}</p>
+                        ${r.has_phone
+                            ? `<a href="tel:${r.phone}" class="phone">${formatPhone(r.phone)}</a>`
+                            : `<span class="no-phone-text">No phone available</span>`
+                        }
                     </div>
+                    <span class="retailer-distance">${r.distance_miles} mi</span>
                 </div>
             `).join('');
 
-            // Enable call button if we have retailers with phones
             callBtn.disabled = data.with_phone === 0;
+        }
+
+        // Format phone number
+        function formatPhone(phone) {
+            if (!phone) return '';
+            const cleaned = phone.replace(/\D/g, '');
+            if (cleaned.length === 11 && cleaned.startsWith('1')) {
+                return `+1 (${cleaned.slice(1,4)}) ${cleaned.slice(4,7)}-${cleaned.slice(7)}`;
+            }
+            return phone;
         }
 
         // Enable call button when API key is entered
@@ -233,7 +763,7 @@
                 return;
             }
 
-            if (!confirm(`This will make up to ${maxCalls} phone calls using your Bland AI credits. Continue?`)) {
+            if (!confirm(`This will make up to ${maxCalls} phone calls. Continue?`)) {
                 return;
             }
 
@@ -279,7 +809,7 @@
                     const response = await fetch(`${API_BASE}/api/call/${jobId}`);
                     const data = await response.json();
 
-                    const percent = (data.completed / data.total) * 100;
+                    const percent = data.total > 0 ? (data.completed / data.total) * 100 : 0;
                     progressBar.style.width = `${percent}%`;
                     progressText.textContent = `${data.completed} / ${data.total}`;
 
@@ -293,7 +823,7 @@
                         callResults.classList.remove('hidden');
                         callBtn.disabled = false;
                     } else if (data.status === 'failed') {
-                        alert('Call job failed: ' + data.error);
+                        alert('Call job failed: ' + (data.error || 'Unknown error'));
                         callProgress.classList.add('hidden');
                         callBtn.disabled = false;
                     } else {
@@ -310,54 +840,48 @@
 
         // Display call results
         function displayCallResults(data) {
-            const statusIcons = {
-                'in_stock': { icon: '✅', label: 'In Stock', class: 'bg-green-100 text-green-800' },
-                'out_of_stock': { icon: '❌', label: 'Out of Stock', class: 'bg-red-100 text-red-800' },
-                'can_order': { icon: '📦', label: 'Can Order', class: 'bg-blue-100 text-blue-800' },
-                'waitlist': { icon: '📋', label: 'Waitlist', class: 'bg-yellow-100 text-yellow-800' },
-                'no_answer': { icon: '📵', label: 'No Answer', class: 'bg-gray-100 text-gray-800' },
-                'call_failed': { icon: '⚠️', label: 'Failed', class: 'bg-gray-100 text-gray-800' },
-                'unknown': { icon: '❓', label: 'Unknown', class: 'bg-gray-100 text-gray-800' }
+            const statusLabels = {
+                'in_stock': 'In Stock',
+                'out_of_stock': 'Out of Stock',
+                'can_order': 'Can Order',
+                'waitlist': 'Waitlist',
+                'no_answer': 'No Answer',
+                'call_failed': 'Call Failed',
+                'unknown': 'Unknown'
             };
 
             const resultsList = document.getElementById('callResultsList');
-            resultsList.innerHTML = data.results.map(r => {
-                const status = statusIcons[r.status] || statusIcons['unknown'];
-                return `
-                    <div class="border border-gray-200 rounded-md p-3">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h4 class="font-medium text-gray-900">${r.retailer_name}</h4>
-                                <p class="text-sm text-gray-600">${r.phone} • ${r.distance} mi</p>
-                                ${r.summary ? `<p class="text-sm text-gray-500 mt-1">${r.summary}</p>` : ''}
-                            </div>
-                            <span class="px-2 py-1 rounded text-sm ${status.class}">
-                                ${status.icon} ${status.label}
-                            </span>
-                        </div>
+            resultsList.innerHTML = data.results.map(r => `
+                <div class="result-card">
+                    <div class="result-info">
+                        <h4>${r.retailer_name}</h4>
+                        <p class="meta">${formatPhone(r.phone)} · ${r.distance} mi</p>
+                        ${r.summary ? `<p class="summary">${r.summary}</p>` : ''}
                     </div>
-                `;
-            }).join('');
+                    <span class="status-badge status-${r.status}">
+                        ${statusLabels[r.status] || r.status}
+                    </span>
+                </div>
+            `).join('');
 
             // Summary
             const summary = document.getElementById('callSummary');
             if (data.summary && data.summary.in_stock > 0) {
                 summary.innerHTML = `
-                    <div class="text-center">
-                        <p class="text-2xl mb-2">🎉</p>
-                        <p class="font-semibold text-green-800">Watch found in stock at ${data.summary.in_stock} retailer(s)!</p>
-                        <div class="mt-2">
-                            ${data.summary.in_stock_retailers.map(r => `
-                                <p class="text-gray-700">${r.retailer_name}: ${r.phone}</p>
-                            `).join('')}
-                        </div>
+                    <div class="summary-box success">
+                        <div class="emoji">🎉</div>
+                        <h4>Watch found in stock!</h4>
+                        ${data.summary.in_stock_retailers.map(r => `
+                            <p class="retailer-result">${r.retailer_name}: <a href="tel:${r.phone}">${formatPhone(r.phone)}</a></p>
+                        `).join('')}
                     </div>
                 `;
             } else {
                 summary.innerHTML = `
-                    <div class="text-center text-gray-600">
-                        <p>Watch not found in stock at the retailers called.</p>
-                        <p class="text-sm mt-1">Try expanding your search radius or calling more retailers.</p>
+                    <div class="summary-box empty">
+                        <div class="emoji">😔</div>
+                        <h4>Watch not found in stock</h4>
+                        <p>Try expanding your search radius or calling more retailers.</p>
                     </div>
                 `;
             }
