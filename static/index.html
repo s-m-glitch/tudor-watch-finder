@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tudor Watch Finder</title>
+    <title>Tic, Horology Handled</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -540,8 +540,8 @@
 <body>
     <div class="container">
         <header>
-            <h1>Tudor Watch Finder</h1>
-            <p>Find your watch at nearby authorized retailers</p>
+            <h1>Tic</h1>
+            <p>Horology Handled</p>
         </header>
 
         <!-- Watch Hero Card -->
@@ -804,7 +804,7 @@
                 pollCallStatus(data.call_id, index);
             } catch (error) {
                 callBtn.disabled = false;
-                callBtn.innerHTML = 'Call Store';
+                callBtn.innerHTML = 'Let Tic Inquire';
                 statusBadge.className = 'status-badge status-unknown';
                 statusBadge.textContent = 'Error';
                 summaryDiv.style.display = 'block';
@@ -858,7 +858,7 @@
             } catch (error) {
                 if (callBtn) {
                     callBtn.disabled = false;
-                    callBtn.innerHTML = 'Call Store';
+                    callBtn.innerHTML = 'Let Tic Inquire';
                 }
                 statusBadge.className = 'status-badge status-unknown';
                 statusBadge.textContent = 'Error';
@@ -891,8 +891,8 @@
             // Disable all call buttons in the section
             callAllSection.querySelectorAll('button').forEach(btn => {
                 btn.disabled = true;
-                if (btn.textContent.includes('Call')) {
-                    btn.innerHTML = '<div class="loading-spinner loading-spinner-dark"></div> Calling...';
+                if (btn.textContent.includes('Tic')) {
+                    btn.innerHTML = '<div class="loading-spinner loading-spinner-dark"></div> Inquiring...';
                 }
             });
 
