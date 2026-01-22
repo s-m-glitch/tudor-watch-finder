@@ -33,18 +33,47 @@ class Retailer:
         return asdict(self)
 
 
+class ZipCodeGeocoder:
+    """Simple geocoder using Zippopotam.us API"""
+
+    API_URL = "https://api.zippopotam.us/us/{zip_code}"
+    _cache = {}
+
+    @classmethod
+    def geocode(cls, zip_code: str) -> Optional[tuple]:
+        """Returns (latitude, longitude) for a zip code"""
+        if not zip_code or len(zip_code) < 5:
+            return None
+
+        zip_code = zip_code[:5]
+
+        if zip_code in cls._cache:
+            return cls._cache[zip_code]
+
+        try:
+            response = requests.get(cls.API_URL.format(zip_code=zip_code), timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                place = data['places'][0]
+                coords = (float(place['latitude']), float(place['longitude']))
+                cls._cache[zip_code] = coords
+                return coords
+        except Exception:
+            pass
+
+        return None
+
+
 class TudorScraper:
     """Scrapes Tudor retailer data from tudorwatch.com"""
 
     BASE_URL = "https://www.tudorwatch.com"
     RETAILERS_URL = "https://www.tudorwatch.com/en/retailers/unitedstates"
 
-    # Headers to mimic a browser request
     HEADERS = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.5",
-        "Connection": "keep-alive",
     }
 
     def __init__(self):
@@ -53,7 +82,6 @@ class TudorScraper:
 
     def fetch_retailer_list_page(self) -> str:
         """Fetch the main retailers page HTML"""
-        # Use coordinates for center of US to get all retailers
         url = f"{self.RETAILERS_URL}?lat=38.555474567327764&lng=-95.66499999999999&z=4"
         response = self.session.get(url, timeout=30)
         response.raise_for_status()
@@ -62,8 +90,6 @@ class TudorScraper:
     def extract_retailer_urls(self, html: str) -> List[str]:
         """Extract all retailer detail page URLs from the main page"""
         soup = BeautifulSoup(html, 'html.parser')
-
-        # Find all links to retailer detail pages
         retailer_links = soup.find_all('a', href=re.compile(r'/retailers/details/unitedstates/'))
 
         urls = set()
@@ -83,85 +109,117 @@ class TudorScraper:
             html = response.text
             soup = BeautifulSoup(html, 'html.parser')
 
-            # Extract retailer name from page title or h1
-            name_elem = soup.find('h1') or soup.find('title')
-            name = name_elem.get_text(strip=True) if name_elem else "Unknown"
-            # Clean up the name
-            name = re.sub(r'\s*[-|]\s*.*$', '', name)
+            page_text = soup.get_text(separator=' ', strip=True)
 
-            # Try to extract address information
-            # Look for address-related content
-            address_text = ""
-            city = ""
-            state = ""
-            zip_code = ""
-            phone = None
-            website = None
-            latitude = None
-            longitude = None
+            # Extract name from title tag
+            title_tag = soup.find('title')
+            name = "Unknown"
+            if title_tag:
+                title_text = title_tag.get_text(strip=True)
+                # Format: "Store Name - United States | Official TUDOR..."
+                name = title_text.split(' - ')[0].strip()
+                name = re.sub(r'^[‭‬\u200e\u200f]+|[‭‬\u200e\u200f]+$', '', name)  # Remove unicode markers
+
+            # Determine retailer type
             retailer_type = "Official Retailer"
-
-            # Look for Tudor Boutique Edition marker
-            if soup.find(string=re.compile(r'Tudor Boutique Edition', re.I)):
+            if 'boutique edition' in page_text.lower() or 'tudor boutique' in name.lower():
                 retailer_type = "Tudor Boutique Edition"
 
-            # Extract address from the page
-            # The address is usually in a specific section
-            address_section = soup.find('address') or soup.find(class_=re.compile(r'address', re.I))
-
-            if address_section:
-                address_text = address_section.get_text(separator=' ', strip=True)
-            else:
-                # Try to find address in the page text
-                page_text = soup.get_text()
-                # Look for patterns like "123 Main St"
-                address_match = re.search(r'(\d+[^,]+),?\s*([A-Za-z\s]+),?\s*([A-Z]{2})\s*(\d{5})', page_text)
-                if address_match:
-                    address_text = address_match.group(1)
-                    city = address_match.group(2).strip()
-                    state = address_match.group(3)
-                    zip_code = address_match.group(4)
-
-            # Extract phone number
+            # Extract phone - look for tel: links first
+            phone = None
             phone_link = soup.find('a', href=re.compile(r'^tel:'))
             if phone_link:
-                phone = phone_link.get('href', '').replace('tel:', '')
-            else:
-                # Try to find phone in text
-                phone_match = re.search(r'\+?1?\s*[-.]?\s*\(?(\d{3})\)?[-.\s]*(\d{3})[-.\s]*(\d{4})', page_text if 'page_text' in dir() else soup.get_text())
-                if phone_match:
-                    phone = f"+1 {phone_match.group(1)}-{phone_match.group(2)}-{phone_match.group(3)}"
+                phone = phone_link.get('href', '').replace('tel:', '').strip()
+                # Clean up phone format
+                phone = re.sub(r'[^\d+]', '', phone)
+                if phone and not phone.startswith('+'):
+                    if len(phone) == 10:
+                        phone = '+1' + phone
+                    elif len(phone) == 11 and phone.startswith('1'):
+                        phone = '+' + phone
+
+            # Extract address components from URL and page
+            # URL format: /retailers/details/unitedstates/state/city/id-name
+            url_parts = detail_url.rstrip('/').split('/')
+            state_from_url = ""
+            city_from_url = ""
+
+            if len(url_parts) >= 3:
+                # Find the state and city parts
+                try:
+                    us_index = url_parts.index('unitedstates')
+                    if us_index + 1 < len(url_parts):
+                        state_from_url = url_parts[us_index + 1]
+                    if us_index + 2 < len(url_parts):
+                        city_from_url = url_parts[us_index + 2]
+                except ValueError:
+                    pass
+
+            # Clean up state
+            state = state_from_url.upper() if len(state_from_url) == 2 else ""
+
+            # State name mapping for longer state names in URL
+            state_map = {
+                'virginia': 'VA', 'texas': 'TX', 'california': 'CA', 'florida': 'FL',
+                'new-york': 'NY', 'newyork': 'NY', 'illinois': 'IL', 'michigan': 'MI',
+                'ohio': 'OH', 'georgia': 'GA', 'arizona': 'AZ', 'colorado': 'CO',
+                'washington': 'WA', 'massachusetts': 'MA', 'pennsylvania': 'PA',
+                'nevada': 'NV', 'oregon': 'OR', 'minnesota': 'MN', 'missouri': 'MO',
+                'maryland': 'MD', 'tennessee': 'TN', 'indiana': 'IN', 'wisconsin': 'WI',
+                'connecticut': 'CT', 'utah': 'UT', 'oklahoma': 'OK', 'kentucky': 'KY',
+                'louisiana': 'LA', 'alabama': 'AL', 'south-carolina': 'SC', 'north-carolina': 'NC',
+                'new-jersey': 'NJ', 'newjersey': 'NJ', 'hawaii': 'HI', 'idaho': 'ID',
+                'nebraska': 'NE', 'kansas': 'KS', 'arkansas': 'AR', 'mississippi': 'MS',
+                'iowa': 'IA', 'new-mexico': 'NM', 'rhode-island': 'RI', 'delaware': 'DE',
+                'maine': 'ME', 'montana': 'MT', 'new-hampshire': 'NH', 'vermont': 'VT',
+                'wyoming': 'WY', 'alaska': 'AK', 'north-dakota': 'ND', 'south-dakota': 'SD',
+                'west-virginia': 'WV', 'dc': 'DC', 'district-of-columbia': 'DC'
+            }
+
+            if not state and state_from_url.lower() in state_map:
+                state = state_map[state_from_url.lower()]
+
+            # Clean up city
+            city = city_from_url.replace('-', ' ').title() if city_from_url else ""
+
+            # Try to extract zip code from page text
+            zip_match = re.search(r'\b(\d{5})(?:-\d{4})?\b', page_text)
+            zip_code = zip_match.group(1) if zip_match else ""
+
+            # Try to extract full address
+            address = ""
+            # Look for address patterns
+            address_patterns = [
+                r'(\d+[^,\n]{5,50}(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Lane|Ln|Way|Place|Pl|Court|Ct|Circle|Cir|Highway|Hwy)[^,\n]{0,30})',
+                r'(\d+\s+[A-Z][a-zA-Z\s]+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Lane|Ln|Way|Plaza|Center|Centre|Mall)[^,\n]{0,50})',
+            ]
+
+            for pattern in address_patterns:
+                match = re.search(pattern, page_text, re.IGNORECASE)
+                if match:
+                    address = match.group(1).strip()
+                    break
+
+            # Get coordinates from zip code
+            latitude = None
+            longitude = None
+            if zip_code:
+                coords = ZipCodeGeocoder.geocode(zip_code)
+                if coords:
+                    latitude, longitude = coords
 
             # Extract website
-            external_links = soup.find_all('a', href=re.compile(r'^https?://(?!.*tudorwatch\.com)'))
-            for link in external_links:
+            website = None
+            for link in soup.find_all('a', href=True):
                 href = link.get('href', '')
-                if 'tudorwatch.com' not in href and not href.startswith('tel:') and not href.startswith('mailto:'):
-                    website = href
-                    break
-
-            # Extract coordinates from any embedded map or data
-            # Look for latitude/longitude in scripts or data attributes
-            for script in soup.find_all('script'):
-                script_text = script.string or ''
-                lat_match = re.search(r'"lat(?:itude)?"\s*:\s*([-\d.]+)', script_text)
-                lng_match = re.search(r'"lng|lon(?:gitude)?"\s*:\s*([-\d.]+)', script_text)
-                if lat_match and lng_match:
-                    latitude = float(lat_match.group(1))
-                    longitude = float(lng_match.group(1))
-                    break
-
-            # Parse city/state from URL if not found
-            url_parts = detail_url.split('/')
-            if len(url_parts) >= 3:
-                if not state:
-                    state = url_parts[-2].upper() if len(url_parts[-2]) == 2 else ""
-                if not city:
-                    city = url_parts[-2].replace('-', ' ').title() if len(url_parts[-2]) > 2 else ""
+                if href.startswith('http') and 'tudorwatch.com' not in href:
+                    if not any(x in href for x in ['facebook', 'instagram', 'twitter', 'youtube', 'tel:', 'mailto:']):
+                        website = href
+                        break
 
             return Retailer(
                 name=name,
-                address=address_text,
+                address=address,
                 city=city,
                 state=state,
                 zip_code=zip_code,
@@ -178,17 +236,8 @@ class TudorScraper:
             print(f"Error fetching {detail_url}: {e}")
             return None
 
-    def scrape_all_retailers(self, max_workers: int = 5, delay: float = 0.5) -> List[Retailer]:
-        """
-        Scrape all US Tudor retailers
-
-        Args:
-            max_workers: Number of concurrent threads for fetching details
-            delay: Delay between requests to be respectful to the server
-
-        Returns:
-            List of Retailer objects
-        """
+    def scrape_all_retailers(self, max_workers: int = 5, delay: float = 0.3) -> List[Retailer]:
+        """Scrape all US Tudor retailers"""
         print("Fetching main retailers page...")
         html = self.fetch_retailer_list_page()
 
@@ -208,11 +257,11 @@ class TudorScraper:
                     retailer = future.result()
                     if retailer:
                         retailers.append(retailer)
-                        print(f"  [{i+1}/{len(urls)}] {retailer.name}")
+                        print(f"  [{i+1}/{len(urls)}] {retailer.name} - {retailer.city}, {retailer.state} - Phone: {retailer.phone or 'N/A'}")
                 except Exception as e:
                     print(f"  [{i+1}/{len(urls)}] Error: {e}")
 
-                time.sleep(delay)  # Rate limiting
+                time.sleep(delay)
 
         return retailers
 
@@ -240,6 +289,7 @@ def main():
     print(f"\nScraping complete!")
     print(f"Total retailers: {len(retailers)}")
     print(f"With phone numbers: {sum(1 for r in retailers if r.phone)}")
+    print(f"With coordinates: {sum(1 for r in retailers if r.latitude)}")
     print(f"Boutiques: {sum(1 for r in retailers if 'Boutique' in r.retailer_type)}")
 
 
