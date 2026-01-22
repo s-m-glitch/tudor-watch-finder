@@ -15,10 +15,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import threading
 
-from config import WATCH_CONFIG, SEARCH_CONFIG, BLAND_AI_CONFIG
+from config import WATCH_CONFIG, SEARCH_CONFIG
 from scraper import TudorScraper, Retailer
 from filter import RetailerFilter
 from phone_caller import InventoryChecker, InventoryStatus, BlandAICaller
+
+# Import BLAND_CONFIG safely (note: config.py uses BLAND_CONFIG, not BLAND_AI_CONFIG)
+try:
+    from config import BLAND_CONFIG
+except ImportError:
+    BLAND_CONFIG = {}
 
 app = FastAPI(
     title="Tudor Watch Finder",
@@ -140,6 +146,15 @@ def get_retailers() -> List[Retailer]:
         raise HTTPException(status_code=503, detail="Timeout waiting for retailers to load")
 
 
+def get_bland_api_key() -> str:
+    """Get Bland AI API key from config"""
+    # Try BLAND_CONFIG first (matches config.py naming)
+    if BLAND_CONFIG and BLAND_CONFIG.get("api_key"):
+        return BLAND_CONFIG["api_key"]
+    # Fallback to environment variable
+    return os.environ.get("BLAND_API_KEY", "")
+
+
 # ============================================================
 # API Endpoints
 # ============================================================
@@ -216,7 +231,7 @@ async def search_retailers(zip_code: str, radius: float = 50):
 @app.post("/api/call")
 async def make_call(request: SingleCallRequest):
     """Start a phone call to check inventory at a single retailer"""
-    api_key = BLAND_AI_CONFIG.get("api_key")
+    api_key = get_bland_api_key()
     if not api_key:
         raise HTTPException(status_code=400, detail="Bland AI API key not configured")
 
@@ -241,7 +256,7 @@ async def make_call(request: SingleCallRequest):
 @app.get("/api/call/{call_id}")
 async def get_call_status(call_id: str):
     """Get the status of a phone call"""
-    api_key = BLAND_AI_CONFIG.get("api_key")
+    api_key = get_bland_api_key()
     if not api_key:
         raise HTTPException(status_code=400, detail="Bland AI API key not configured")
 
