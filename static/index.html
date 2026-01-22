@@ -951,20 +951,36 @@
                 if (data.status === 'completed' || data.status === 'failed') {
                     if (callBtn) callBtn.style.display = 'none';
 
-                    if (data.inventory_status === 'in_stock') {
-                        if (phoneStock) {
-                            phoneStock.className = 'stock-status stock-in-stock';
-                            phoneStock.innerHTML = '<span class="stock-indicator"></span><span>In Stock!</span>';
-                        }
-                    } else if (data.inventory_status === 'out_of_stock') {
-                        if (phoneStock) {
-                            phoneStock.className = 'stock-status stock-out-of-stock';
-                            phoneStock.innerHTML = '<span class="stock-indicator"></span><span>Out of Stock</span>';
-                        }
-                    } else {
-                        if (phoneStock) {
-                            phoneStock.className = 'stock-status stock-unknown';
-                            phoneStock.innerHTML = '<span class="stock-indicator"></span><span>Unknown</span>';
+                    // Handle all inventory status types
+                    if (phoneStock) {
+                        switch (data.inventory_status) {
+                            case 'in_stock':
+                                phoneStock.className = 'stock-status stock-in-stock';
+                                phoneStock.innerHTML = '<span class="stock-indicator"></span><span>In Stock!</span>';
+                                break;
+                            case 'out_of_stock':
+                                phoneStock.className = 'stock-status stock-out-of-stock';
+                                phoneStock.innerHTML = '<span class="stock-indicator"></span><span>Out of Stock</span>';
+                                break;
+                            case 'waitlist':
+                                phoneStock.className = 'stock-status stock-unknown';
+                                phoneStock.innerHTML = '<span class="stock-indicator"></span><span>Waitlist Available</span>';
+                                break;
+                            case 'can_order':
+                                phoneStock.className = 'stock-status stock-unknown';
+                                phoneStock.innerHTML = '<span class="stock-indicator"></span><span>Can Order</span>';
+                                break;
+                            case 'no_answer':
+                                phoneStock.className = 'stock-status stock-unknown';
+                                phoneStock.innerHTML = '<span class="stock-indicator"></span><span>No Answer</span>';
+                                break;
+                            case 'call_failed':
+                                phoneStock.className = 'stock-status stock-unknown';
+                                phoneStock.innerHTML = '<span class="stock-indicator"></span><span>Call Failed</span>';
+                                break;
+                            default:
+                                phoneStock.className = 'stock-status stock-unknown';
+                                phoneStock.innerHTML = '<span class="stock-indicator"></span><span>Unknown</span>';
                         }
                     }
 

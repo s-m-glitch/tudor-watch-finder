@@ -376,7 +376,10 @@ CONVERSATION STYLE:
                     "waitlist", "waiting list", "wait list", "interest list",
                     "put you on a list", "add you to a list", "notify you",
                     "call you when", "contact you when", "let you know when",
-                    "register.*interest", "take your information"
+                    "register.*interest", "take your information",
+                    "client book", "client list", "come into the store",
+                    "stop by", "visit.*store", "in-store visit", "in store visit",
+                    "happy to add you", "add you if you"
                 ]
                 for wp in waitlist_phrases:
                     if re.search(wp, text):
