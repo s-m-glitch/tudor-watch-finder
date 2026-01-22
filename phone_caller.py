@@ -159,7 +159,7 @@ CONVERSATION STYLE:
 
             if response.status_code == 200:
                 data = response.json()
-                call_id = data.get('call_id')
+                call_id = data.get('call_id') if data else None
 
                 if call_id:
                     # Wait for call to complete and get results
@@ -235,7 +235,14 @@ CONVERSATION STYLE:
 
                 if response.status_code == 200:
                     data = response.json()
-                    status = data.get('status', '')
+
+                    # Handle None or empty response gracefully
+                    if data is None:
+                        print(f"    Call status: waiting (empty response)...")
+                        time.sleep(poll_interval)
+                        continue
+
+                    status = data.get('status', '') if isinstance(data, dict) else ''
 
                     # Check if call is complete - added 'busy' and 'voicemail' statuses
                     if status in ['completed', 'ended', 'failed', 'no-answer', 'busy', 'voicemail']:
@@ -263,6 +270,20 @@ CONVERSATION STYLE:
 
     def _parse_call_result(self, call_id: str, data: Dict) -> CallResult:
         """Parse the call result data from Bland AI"""
+
+        # Safety check for None data
+        if data is None:
+            return CallResult(
+                retailer_name="",
+                retailer_phone="",
+                call_id=call_id,
+                status=InventoryStatus.CALL_FAILED,
+                transcript=None,
+                summary="No data returned from API",
+                call_duration=None,
+                timestamp="",
+                raw_response=None
+            )
 
         status = data.get('status', '')
         transcript = data.get('transcript', '') or data.get('concatenated_transcript', '')
