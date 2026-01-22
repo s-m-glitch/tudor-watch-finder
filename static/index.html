@@ -192,6 +192,16 @@
             cursor: not-allowed;
         }
 
+        .btn-outline {
+            background: transparent;
+            color: #3b82f6;
+            border: 1px solid #3b82f6;
+        }
+
+        .btn-outline:hover {
+            background: #eff6ff;
+        }
+
         .results-section {
             margin-top: 32px;
         }
@@ -275,11 +285,50 @@
             display: flex;
             gap: 8px;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         .btn-small {
             padding: 8px 16px;
             font-size: 0.8rem;
+        }
+
+        .stock-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .stock-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .stock-in-stock {
+            color: #059669;
+        }
+
+        .stock-in-stock .stock-indicator {
+            background: #059669;
+        }
+
+        .stock-out-of-stock {
+            color: #dc2626;
+        }
+
+        .stock-out-of-stock .stock-indicator {
+            background: #dc2626;
+        }
+
+        .stock-unknown {
+            color: #6b7280;
+        }
+
+        .stock-unknown .stock-indicator {
+            background: #9ca3af;
         }
 
         .status-badge {
@@ -330,6 +379,11 @@
             border-top-color: transparent;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
+        }
+
+        .loading-spinner-dark {
+            border-color: #3b82f6;
+            border-top-color: transparent;
         }
 
         @keyframes spin {
@@ -410,6 +464,12 @@
             margin-bottom: 12px;
         }
 
+        .call-options {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
         .progress-bar {
             height: 8px;
             background: #dcfce7;
@@ -465,6 +525,14 @@
             .btn {
                 width: 100%;
                 justify-content: center;
+            }
+
+            .call-options {
+                flex-direction: column;
+            }
+
+            .call-options .btn {
+                width: 100%;
             }
         }
     </style>
@@ -531,13 +599,21 @@
 
                 <div id="retailerList" class="retailer-list"></div>
 
-                <!-- Call All Section -->
+                <!-- Call Options Section -->
                 <div id="callAllSection" class="call-all-section" style="display: none;">
-                    <h4>Check Inventory at All Stores</h4>
-                    <p>Automatically call all retailers to check if they have the Tudor Ranger in stock.</p>
-                    <button class="btn btn-secondary" id="callAllBtn" onclick="callAllRetailers()">
-                        Call All Retailers
-                    </button>
+                    <h4>Check Inventory by Phone</h4>
+                    <p>Automatically call retailers to check if they have the Tudor Ranger in stock.</p>
+                    <div class="call-options">
+                        <button class="btn btn-secondary btn-small" onclick="callRetailers(3)">
+                            Call 3 Stores
+                        </button>
+                        <button class="btn btn-secondary btn-small" onclick="callRetailers(5)">
+                            Call 5 Stores
+                        </button>
+                        <button class="btn btn-outline btn-small" onclick="callRetailers('all')">
+                            Call All Stores
+                        </button>
+                    </div>
                     <div id="callProgress" style="display: none;">
                         <div class="progress-bar">
                             <div class="progress-fill" id="progressFill" style="width: 0%"></div>
@@ -588,7 +664,8 @@
 
     <script>
         let retailers = [];
-        let callsInProgress = {};
+        let callsInProgress = 0;
+        let totalCallsToMake = 0;
 
         async function searchRetailers() {
             const zipCode = document.getElementById('zipCode').value;
@@ -647,7 +724,15 @@
                 return;
             }
 
-            callAllSection.style.display = 'block';
+            // Show call options if there are retailers with phones
+            const retailersWithPhone = retailers.filter(r => r.phone);
+            if (retailersWithPhone.length > 0) {
+                callAllSection.style.display = 'block';
+                // Reset progress
+                document.getElementById('callProgress').style.display = 'none';
+            } else {
+                callAllSection.style.display = 'none';
+            }
 
             retailerList.innerHTML = retailers.map((retailer, index) => `
                 <div class="retailer-card" id="retailer-${index}">
@@ -657,24 +742,47 @@
                     </div>
                     <div class="retailer-address">${retailer.city}, ${retailer.state} ${retailer.zip_code}</div>
                     ${retailer.phone ? `<a href="tel:${retailer.phone}" class="retailer-phone">${retailer.phone}</a>` : ''}
-                    <div class="retailer-actions">
-                        ${retailer.phone ? `
-                            <button class="btn btn-secondary btn-small" onclick="callRetailer(${index})" id="callBtn-${index}">
-                                Check Stock
-                            </button>
-                        ` : '<span class="status-badge status-unknown">No phone available</span>'}
-                        <span class="status-badge status-pending" id="status-${index}" style="display: none;"></span>
+                    <div class="retailer-actions" id="actions-${index}">
+                        ${getStockDisplay(retailer, index)}
                     </div>
                     <div class="call-summary" id="summary-${index}" style="display: none;"></div>
                 </div>
             `).join('');
         }
 
+        function getStockDisplay(retailer, index) {
+            // For now, we don't have online stock data, so show "Stock unknown" with call button
+            // In the future, this could check an API for online stock levels
+
+            if (!retailer.phone) {
+                return `
+                    <div class="stock-status stock-unknown">
+                        <span class="stock-indicator"></span>
+                        <span>No phone available</span>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="stock-status stock-unknown" id="stock-${index}">
+                    <span class="stock-indicator"></span>
+                    <span>Stock unknown</span>
+                </div>
+                <button class="btn btn-secondary btn-small" onclick="callRetailer(${index})" id="callBtn-${index}">
+                    Call Store
+                </button>
+                <span class="status-badge" id="status-${index}" style="display: none;"></span>
+            `;
+        }
+
         async function callRetailer(index) {
             const retailer = retailers[index];
             const callBtn = document.getElementById(`callBtn-${index}`);
             const statusBadge = document.getElementById(`status-${index}`);
+            const stockStatus = document.getElementById(`stock-${index}`);
             const summaryDiv = document.getElementById(`summary-${index}`);
+
+            if (!callBtn) return;
 
             callBtn.disabled = true;
             callBtn.innerHTML = '<div class="loading-spinner"></div> Calling...';
@@ -702,7 +810,7 @@
                 pollCallStatus(data.call_id, index);
             } catch (error) {
                 callBtn.disabled = false;
-                callBtn.innerHTML = 'Check Stock';
+                callBtn.innerHTML = 'Call Store';
                 statusBadge.className = 'status-badge status-unknown';
                 statusBadge.textContent = 'Error';
                 summaryDiv.style.display = 'block';
@@ -713,6 +821,7 @@
         async function pollCallStatus(callId, index) {
             const callBtn = document.getElementById(`callBtn-${index}`);
             const statusBadge = document.getElementById(`status-${index}`);
+            const stockStatus = document.getElementById(`stock-${index}`);
             const summaryDiv = document.getElementById(`summary-${index}`);
 
             try {
@@ -720,14 +829,22 @@
                 const data = await response.json();
 
                 if (data.status === 'completed' || data.status === 'failed') {
-                    callBtn.style.display = 'none';
+                    if (callBtn) callBtn.style.display = 'none';
 
                     if (data.inventory_status === 'in_stock') {
                         statusBadge.className = 'status-badge status-in-stock';
                         statusBadge.textContent = '✓ In Stock';
+                        if (stockStatus) {
+                            stockStatus.className = 'stock-status stock-in-stock';
+                            stockStatus.innerHTML = '<span class="stock-indicator"></span><span>In Stock!</span>';
+                        }
                     } else if (data.inventory_status === 'out_of_stock') {
                         statusBadge.className = 'status-badge status-out-of-stock';
                         statusBadge.textContent = '✗ Out of Stock';
+                        if (stockStatus) {
+                            stockStatus.className = 'stock-status stock-out-of-stock';
+                            stockStatus.innerHTML = '<span class="stock-indicator"></span><span>Out of Stock</span>';
+                        }
                     } else {
                         statusBadge.className = 'status-badge status-unknown';
                         statusBadge.textContent = '? Unknown';
@@ -738,49 +855,77 @@
                         summaryDiv.textContent = data.summary;
                     }
 
-                    // Update global stats if calling all
+                    // Update global stats
                     updateCallStats();
                 } else {
                     // Still in progress, poll again
                     setTimeout(() => pollCallStatus(callId, index), 3000);
                 }
             } catch (error) {
-                callBtn.disabled = false;
-                callBtn.innerHTML = 'Check Stock';
+                if (callBtn) {
+                    callBtn.disabled = false;
+                    callBtn.innerHTML = 'Call Store';
+                }
                 statusBadge.className = 'status-badge status-unknown';
                 statusBadge.textContent = 'Error';
             }
         }
 
-        async function callAllRetailers() {
-            const callAllBtn = document.getElementById('callAllBtn');
+        async function callRetailers(count) {
             const callProgress = document.getElementById('callProgress');
+            const callAllSection = document.getElementById('callAllSection');
 
-            callAllBtn.disabled = true;
-            callAllBtn.innerHTML = '<div class="loading-spinner"></div> Calling stores...';
-            callProgress.style.display = 'block';
-
-            const retailersWithPhone = retailers.filter(r => r.phone);
-            let completed = 0;
-
+            // Get retailers with phones that haven't been called yet
+            const retailersToCall = [];
             for (let i = 0; i < retailers.length; i++) {
                 if (retailers[i].phone) {
                     const callBtn = document.getElementById(`callBtn-${i}`);
-                    if (callBtn && !callBtn.disabled) {
-                        await callRetailer(i);
-                        // Small delay between calls
-                        await new Promise(resolve => setTimeout(resolve, 2000));
+                    if (callBtn && !callBtn.disabled && callBtn.style.display !== 'none') {
+                        retailersToCall.push(i);
                     }
+                }
+            }
+
+            // Determine how many to call
+            let numToCall = count === 'all' ? retailersToCall.length : Math.min(count, retailersToCall.length);
+
+            if (numToCall === 0) {
+                alert('No retailers available to call');
+                return;
+            }
+
+            // Disable all call buttons in the section
+            callAllSection.querySelectorAll('button').forEach(btn => {
+                btn.disabled = true;
+                if (btn.textContent.includes('Call')) {
+                    btn.innerHTML = '<div class="loading-spinner loading-spinner-dark"></div> Calling...';
+                }
+            });
+
+            callProgress.style.display = 'block';
+            totalCallsToMake = numToCall;
+            callsInProgress = 0;
+
+            // Call retailers sequentially
+            for (let i = 0; i < numToCall; i++) {
+                const retailerIndex = retailersToCall[i];
+                await callRetailer(retailerIndex);
+
+                // Small delay between calls
+                if (i < numToCall - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
                 }
             }
         }
 
         function updateCallStats() {
             let inStock = 0, outOfStock = 0, unknown = 0;
+            let totalCalled = 0;
 
             for (let i = 0; i < retailers.length; i++) {
                 const statusBadge = document.getElementById(`status-${i}`);
                 if (statusBadge && statusBadge.style.display !== 'none') {
+                    totalCalled++;
                     if (statusBadge.classList.contains('status-in-stock')) inStock++;
                     else if (statusBadge.classList.contains('status-out-of-stock')) outOfStock++;
                     else if (statusBadge.classList.contains('status-unknown')) unknown++;
@@ -791,30 +936,46 @@
             document.getElementById('outOfStockCount').textContent = outOfStock;
             document.getElementById('unknownCount').textContent = unknown;
 
-            const total = inStock + outOfStock + unknown;
             const retailersWithPhone = retailers.filter(r => r.phone).length;
-            const progress = retailersWithPhone > 0 ? (total / retailersWithPhone) * 100 : 0;
+            const progress = totalCallsToMake > 0 ? (totalCalled / totalCallsToMake) * 100 : 0;
             document.getElementById('progressFill').style.width = `${progress}%`;
 
-            if (total === retailersWithPhone && retailersWithPhone > 0) {
-                const callAllBtn = document.getElementById('callAllBtn');
-                callAllBtn.disabled = true;
-                callAllBtn.innerHTML = 'All calls complete';
-            }
+            // Check if all intended calls are complete
+            if (totalCalled >= totalCallsToMake && totalCallsToMake > 0) {
+                const callAllSection = document.getElementById('callAllSection');
 
-            // Show summary if we found stock
-            if (inStock > 0) {
-                const callAllSection = document.getElementById('callAllSection');
-                callAllSection.innerHTML = `
-                    <h4 style="color: #059669;">🎉 Watch Found!</h4>
-                    <p>The Tudor Ranger is available at ${inStock} retailer${inStock !== 1 ? 's' : ''}. Check the results above for details.</p>
-                `;
-            } else if (total === retailersWithPhone && retailersWithPhone > 0 && inStock === 0) {
-                const callAllSection = document.getElementById('callAllSection');
-                callAllSection.innerHTML = `
-                    <h4>Watch not found in stock</h4>
-                    <p>Try expanding your search radius or calling more retailers.</p>
-                `;
+                if (inStock > 0) {
+                    callAllSection.innerHTML = `
+                        <h4 style="color: #059669;">🎉 Watch Found!</h4>
+                        <p>The Tudor Ranger is available at ${inStock} retailer${inStock !== 1 ? 's' : ''}. Check the results above for details.</p>
+                    `;
+                } else {
+                    // Re-enable buttons for remaining retailers
+                    const remainingRetailers = retailers.filter((r, i) => {
+                        const btn = document.getElementById(`callBtn-${i}`);
+                        return r.phone && btn && btn.style.display !== 'none';
+                    }).length;
+
+                    if (remainingRetailers > 0) {
+                        callAllSection.innerHTML = `
+                            <h4>No stock found yet</h4>
+                            <p>The Tudor Ranger wasn't found at the stores we called. Try calling more retailers.</p>
+                            <div class="call-options">
+                                <button class="btn btn-secondary btn-small" onclick="callRetailers(3)">
+                                    Call 3 More
+                                </button>
+                                <button class="btn btn-outline btn-small" onclick="callRetailers('all')">
+                                    Call Remaining (${remainingRetailers})
+                                </button>
+                            </div>
+                        `;
+                    } else {
+                        callAllSection.innerHTML = `
+                            <h4>All stores checked</h4>
+                            <p>Unfortunately, the Tudor Ranger wasn't found in stock at any nearby retailers. Try expanding your search radius.</p>
+                        `;
+                    }
+                }
             }
         }
     </script>
