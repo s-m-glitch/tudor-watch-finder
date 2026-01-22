@@ -329,21 +329,29 @@ async def make_single_call(request: SingleCallRequest, background_tasks: Backgro
         raise HTTPException(status_code=500, detail=f"Failed to start call: {str(e)}")
 
 
-async def run_single_call_background(job_id: str, retailer_name: str, phone: str, api_key: str):
-    """Background task to make a single phone call"""
+def run_single_call_background(job_id: str, retailer_name: str, phone: str, api_key: str):
+    """Background task to make a single phone call (runs synchronously in thread pool)"""
     try:
+        print(f"[{job_id}] Starting background call to {retailer_name} at {phone}")
         call_jobs[job_id]["status"] = "in_progress"
 
         # Create caller and make the call (this is synchronous and waits for completion)
+        print(f"[{job_id}] Creating BlandAICaller...")
         caller = BlandAICaller(api_key)
+        print(f"[{job_id}] Making call...")
         result = caller.make_call(phone, retailer_name)
+        print(f"[{job_id}] Call completed with status: {result.status.value}")
 
         # Generate summary using Claude if we have a transcript
         summary = ""
         if result.transcript and result.transcript.strip():
-            print(f"Generating summary with Claude for {retailer_name}...")
-            summary = summarize_transcript(result.transcript, retailer_name)
-            print(f"  Summary: {summary[:100]}...")
+            print(f"[{job_id}] Generating summary with Claude for {retailer_name}...")
+            try:
+                summary = summarize_transcript(result.transcript, retailer_name)
+                print(f"[{job_id}] Summary generated: {summary[:100]}...")
+            except Exception as sum_err:
+                print(f"[{job_id}] Error generating summary: {sum_err}")
+                summary = ""
 
         # Fallback if Claude summarization failed or no transcript
         if not summary or summary.strip() == "":
@@ -373,8 +381,12 @@ async def run_single_call_background(job_id: str, retailer_name: str, phone: str
             "call_duration": result.call_duration
         }
         call_jobs[job_id]["completed_at"] = datetime.now().isoformat()
+        print(f"[{job_id}] Job completed successfully")
 
     except Exception as e:
+        import traceback
+        print(f"[{job_id}] ERROR in background task: {e}")
+        print(f"[{job_id}] Traceback: {traceback.format_exc()}")
         call_jobs[job_id]["status"] = "failed"
         call_jobs[job_id]["error"] = str(e)
 

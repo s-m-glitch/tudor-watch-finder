@@ -149,6 +149,7 @@ CONVERSATION STYLE:
 
         try:
             print(f"  Calling {retailer_name} at {clean_phone}...")
+            print(f"  API URL: {self.base_url}/calls")
 
             response = requests.post(
                 f"{self.base_url}/calls",
@@ -157,13 +158,19 @@ CONVERSATION STYLE:
                 timeout=30
             )
 
+            print(f"  Response status: {response.status_code}")
+            print(f"  Response text: {response.text[:500] if response.text else 'empty'}")
+
             if response.status_code == 200:
                 try:
                     data = response.json()
-                except Exception:
+                    print(f"  Parsed response: {data}")
+                except Exception as json_err:
+                    print(f"  JSON parse error: {json_err}")
                     data = None
 
                 call_id = data.get('call_id') if data and isinstance(data, dict) else None
+                print(f"  Call ID: {call_id}")
 
                 if call_id:
                     # Wait for call to complete and get results
