@@ -158,8 +158,12 @@ CONVERSATION STYLE:
             )
 
             if response.status_code == 200:
-                data = response.json()
-                call_id = data.get('call_id') if data else None
+                try:
+                    data = response.json()
+                except Exception:
+                    data = None
+
+                call_id = data.get('call_id') if data and isinstance(data, dict) else None
 
                 if call_id:
                     # Wait for call to complete and get results
@@ -234,21 +238,27 @@ CONVERSATION STYLE:
                 )
 
                 if response.status_code == 200:
-                    data = response.json()
+                    # Safely parse JSON
+                    try:
+                        data = response.json()
+                    except Exception:
+                        data = None
 
                     # Handle None or empty response gracefully
-                    if data is None:
+                    if not data or not isinstance(data, dict):
                         print(f"    Call status: waiting (empty response)...")
                         time.sleep(poll_interval)
                         continue
 
-                    status = data.get('status', '') if isinstance(data, dict) else ''
+                    status = data.get('status', '')
 
                     # Check if call is complete - added 'busy' and 'voicemail' statuses
                     if status in ['completed', 'ended', 'failed', 'no-answer', 'busy', 'voicemail']:
                         return self._parse_call_result(call_id, data)
 
                     print(f"    Call status: {status}...")
+                else:
+                    print(f"    Call status: API returned {response.status_code}...")
 
             except Exception as e:
                 print(f"    Error polling call status: {e}")
@@ -272,7 +282,7 @@ CONVERSATION STYLE:
         """Parse the call result data from Bland AI"""
 
         # Safety check for None data
-        if data is None:
+        if not data or not isinstance(data, dict):
             return CallResult(
                 retailer_name="",
                 retailer_phone="",
@@ -287,7 +297,7 @@ CONVERSATION STYLE:
 
         status = data.get('status', '')
         transcript = data.get('transcript', '') or data.get('concatenated_transcript', '')
-        summary = data.get('summary', '') or data.get('analysis', {}).get('summary', '')
+        summary = data.get('summary', '') or (data.get('analysis') or {}).get('summary', '')
         duration = data.get('call_length') or data.get('duration')
 
         # Handle busy/voicemail/no-answer statuses directly
