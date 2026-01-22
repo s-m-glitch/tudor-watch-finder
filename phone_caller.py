@@ -297,7 +297,16 @@ CONVERSATION STYLE:
 
         status = data.get('status', '')
         transcript = data.get('transcript', '') or data.get('concatenated_transcript', '')
-        summary = data.get('summary', '') or (data.get('analysis') or {}).get('summary', '')
+
+        # Try multiple possible locations for the summary
+        summary = (
+            data.get('summary') or
+            data.get('call_summary') or
+            (data.get('analysis') or {}).get('summary') or
+            (data.get('summary_info') or {}).get('summary') or
+            data.get('ai_summary') or
+            ''
+        )
         duration = data.get('call_length') or data.get('duration')
 
         # Handle busy/voicemail/no-answer statuses directly
@@ -341,6 +350,24 @@ CONVERSATION STYLE:
             InventoryStatus enum value
         """
         text = f"{transcript} {summary}".lower()
+
+        # First check for automated systems / IVR / hold messages
+        # These mean we didn't actually talk to anyone
+        automated_phrases = [
+            "press zero", "press 0", "press one", "press 1",
+            "press two", "press 2", "all our associates",
+            "all of our associates", "currently assisting",
+            "please hold", "your call is important",
+            "leave a message", "after the beep", "after the tone",
+            "office hours", "business hours", "currently closed",
+            "call back", "try again later", "menu options",
+            "for sales press", "for service press",
+            "thanks, goodbye", "thanks goodbye",  # Agent hung up without info
+            "ended call"  # Agent ended without getting info
+        ]
+        for phrase in automated_phrases:
+            if phrase in text:
+                return InventoryStatus.UNKNOWN
 
         # Check for no answer / voicemail first
         no_answer_phrases = [
@@ -399,15 +426,19 @@ CONVERSATION STYLE:
                 return InventoryStatus.OUT_OF_STOCK
 
         # Now check for POSITIVE indicators (only if no negative indicators found)
+        # IMPORTANT: These must be specific enough to not match the agent's own questions
+        # Avoid phrases like "have that" which appear in "Do you have that in stock?"
         in_stock_phrases = [
             "we have it", "we do have", "yes we have", "have it in stock",
-            "have one in stock", "have them in stock", "is in stock",
-            "are in stock", "it's available", "it is available",
-            "they're available", "they are available", "got it",
-            "got one", "got them", "have that", "have the",
-            "currently have", "do have it", "in stock now",
-            "available now", "ready for", "can come in today",
-            "come pick it up", "have it here"
+            "have one in stock", "have them in stock",
+            "it's available", "it is available",
+            "they're available", "they are available",
+            "yes we do", "we do have that", "we have that one",
+            "we currently have", "do have it", "in stock now",
+            "available now", "ready for pickup", "can come in today",
+            "come pick it up", "have it here", "we have one",
+            "got one here", "got it here", "have that model",
+            "have the ranger", "have that watch"
         ]
 
         for phrase in in_stock_phrases:

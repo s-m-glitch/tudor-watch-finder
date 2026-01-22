@@ -338,12 +338,33 @@ async def run_single_call_background(job_id: str, retailer_name: str, phone: str
         result = caller.make_call(phone, retailer_name)
 
         # Store result
+        # Generate a fallback summary if Bland AI didn't provide one
+        summary = result.summary
+
+        # Debug: log what we got from Bland
+        if result.raw_response:
+            print(f"Bland API response keys: {list(result.raw_response.keys())}")
+            if 'summary' in result.raw_response:
+                print(f"  summary field: {result.raw_response.get('summary')}")
+            if 'analysis' in result.raw_response:
+                print(f"  analysis field: {result.raw_response.get('analysis')}")
+
+        if not summary or summary.strip() == "":
+            status_text = result.status.value.replace("_", " ")
+            summary = f"Call completed. Status: {status_text}."
+            if result.transcript:
+                # Add a brief excerpt from the transcript
+                transcript_preview = result.transcript[:200].strip()
+                if len(result.transcript) > 200:
+                    transcript_preview += "..."
+                summary = f"{summary} Transcript: {transcript_preview}"
+
         call_jobs[job_id]["status"] = "completed"
         call_jobs[job_id]["result"] = {
             "retailer_name": result.retailer_name,
             "phone": result.retailer_phone,
             "inventory_status": result.status.value,
-            "summary": result.summary,
+            "summary": summary,
             "transcript": result.transcript,
             "call_duration": result.call_duration
         }
