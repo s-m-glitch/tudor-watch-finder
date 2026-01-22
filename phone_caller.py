@@ -7,6 +7,7 @@ import os
 import time
 import json
 import requests
+import re
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass, asdict
 from datetime import datetime
@@ -296,52 +297,90 @@ CONVERSATION STYLE:
         """
         text = f"{transcript} {summary}".lower()
 
-        # Check for positive indicators
-        in_stock_phrases = [
-            "we have it", "in stock", "have one", "available",
-            "yes we do", "got it", "can get it", "have that"
-        ]
-
-        out_of_stock_phrases = [
-            "don't have", "out of stock", "sold out", "not available",
-            "don't carry", "discontinued", "no longer"
-        ]
-
-        waitlist_phrases = [
-            "waitlist", "waiting list", "put you on a list",
-            "notify you", "call you when"
-        ]
-
-        can_order_phrases = [
-            "can order", "special order", "order it for you",
-            "take a few weeks", "get it in"
-        ]
-
+        # Check for no answer / voicemail first
         no_answer_phrases = [
             "no answer", "voicemail", "didn't pick up",
-            "couldn't reach", "busy signal"
+            "couldn't reach", "busy signal", "not available",
+            "leave a message", "after the tone", "mailbox"
         ]
-
-        # Check in order of priority
-        for phrase in in_stock_phrases:
-            if phrase in text:
-                return InventoryStatus.IN_STOCK
-
-        for phrase in waitlist_phrases:
-            if phrase in text:
-                return InventoryStatus.WAITLIST
-
-        for phrase in can_order_phrases:
-            if phrase in text:
-                return InventoryStatus.CAN_ORDER
-
         for phrase in no_answer_phrases:
             if phrase in text:
                 return InventoryStatus.NO_ANSWER
 
+        # Check for NEGATIVE indicators FIRST (before positive ones)
+        # This prevents "not in stock" from matching "in stock"
+        out_of_stock_phrases = [
+            "not in stock", "out of stock", "don't have", "do not have",
+            "don't carry", "do not carry", "sold out", "not available",
+            "currently out", "wasn't in stock", "was not in stock",
+            "weren't in stock", "were not in stock", "isn't in stock",
+            "is not in stock", "aren't in stock", "are not in stock",
+            "doesn't have", "does not have", "didn't have", "did not have",
+            "unavailable", "no longer", "discontinued", "can't get",
+            "cannot get", "unable to", "don't currently have",
+            "do not currently have", "not currently in stock",
+            "currently not in stock", "currently unavailable"
+        ]
+
         for phrase in out_of_stock_phrases:
             if phrase in text:
+                # Found a negative indicator - now check for waitlist/order options
+
+                # Check for waitlist
+                waitlist_phrases = [
+                    "waitlist", "waiting list", "wait list", "interest list",
+                    "put you on a list", "add you to a list", "notify you",
+                    "call you when", "contact you when", "let you know when",
+                    "register.*interest", "take your information"
+                ]
+                for wp in waitlist_phrases:
+                    if re.search(wp, text):
+                        return InventoryStatus.WAITLIST
+
+                # Check for can order
+                can_order_phrases = [
+                    "can order", "could order", "special order", "order it for you",
+                    "order one for you", "place an order", "get it in",
+                    "take a few weeks", "take some time", "within a month",
+                    "expect.*shipment", "expecting.*shipment", "more coming"
+                ]
+                for cop in can_order_phrases:
+                    if re.search(cop, text):
+                        return InventoryStatus.CAN_ORDER
+
                 return InventoryStatus.OUT_OF_STOCK
+
+        # Now check for POSITIVE indicators (only if no negative indicators found)
+        in_stock_phrases = [
+            "we have it", "we do have", "yes we have", "have it in stock",
+            "have one in stock", "have them in stock", "is in stock",
+            "are in stock", "it's available", "it is available",
+            "they're available", "they are available", "got it",
+            "got one", "got them", "have that", "have the",
+            "currently have", "do have it", "in stock now",
+            "available now", "ready for", "can come in today",
+            "come pick it up", "have it here"
+        ]
+
+        for phrase in in_stock_phrases:
+            if phrase in text:
+                return InventoryStatus.IN_STOCK
+
+        # Check for waitlist mentions without explicit out of stock
+        waitlist_phrases = [
+            "waitlist", "waiting list", "wait list", "interest list"
+        ]
+        for phrase in waitlist_phrases:
+            if phrase in text:
+                return InventoryStatus.WAITLIST
+
+        # Check for order mentions without explicit out of stock
+        order_phrases = [
+            "can order", "special order"
+        ]
+        for phrase in order_phrases:
+            if phrase in text:
+                return InventoryStatus.CAN_ORDER
 
         return InventoryStatus.UNKNOWN
 
