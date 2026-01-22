@@ -604,14 +604,8 @@
                     <h4>Check Inventory by Phone</h4>
                     <p>Automatically call retailers to check if they have the Tudor Ranger in stock.</p>
                     <div class="call-options">
-                        <button class="btn btn-secondary btn-small" onclick="callRetailers(3)">
-                            Call 3 Stores
-                        </button>
-                        <button class="btn btn-secondary btn-small" onclick="callRetailers(5)">
-                            Call 5 Stores
-                        </button>
-                        <button class="btn btn-outline btn-small" onclick="callRetailers('all')">
-                            Call All Stores
+                        <button class="btn btn-secondary btn-small" onclick="callRetailers('all')">
+                            Let Tic Inquire at All Stores
                         </button>
                     </div>
                     <div id="callProgress" style="display: none;">
@@ -769,7 +763,7 @@
                     <span>Stock unknown</span>
                 </div>
                 <button class="btn btn-secondary btn-small" onclick="callRetailer(${index})" id="callBtn-${index}">
-                    Call Store
+                    Let Tic Inquire
                 </button>
                 <span class="status-badge" id="status-${index}" style="display: none;"></span>
             `;
@@ -961,11 +955,8 @@
                             <h4>No stock found yet</h4>
                             <p>The Tudor Ranger wasn't found at the stores we called. Try calling more retailers.</p>
                             <div class="call-options">
-                                <button class="btn btn-secondary btn-small" onclick="callRetailers(3)">
-                                    Call 3 More
-                                </button>
-                                <button class="btn btn-outline btn-small" onclick="callRetailers('all')">
-                                    Call Remaining (${remainingRetailers})
+                                <button class="btn btn-secondary btn-small" onclick="callRetailers('all')">
+                                    Let Tic Inquire at Remaining Stores (${remainingRetailers})
                                 </button>
                             </div>
                         `;
