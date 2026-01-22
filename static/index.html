@@ -335,38 +335,6 @@
             background: #9ca3af;
         }
 
-        .status-badge {
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .status-pending {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .status-calling {
-            background: #dbeafe;
-            color: #1e40af;
-        }
-
-        .status-in-stock {
-            background: #d1fae5;
-            color: #065f46;
-        }
-
-        .status-out-of-stock {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .status-unknown {
-            background: #f3f4f6;
-            color: #6b7280;
-        }
-
         .call-summary {
             margin-top: 12px;
             padding: 12px;
@@ -374,6 +342,71 @@
             border-radius: 8px;
             font-size: 0.85rem;
             color: #4b5563;
+        }
+
+        .summary-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            color: #6b7280;
+            font-size: 0.8rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            margin-left: auto;
+        }
+
+        .summary-toggle:hover {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .summary-toggle .chevron {
+            transition: transform 0.2s;
+            font-size: 0.7rem;
+        }
+
+        .summary-toggle.expanded .chevron {
+            transform: rotate(90deg);
+        }
+
+        .inline-summary {
+            display: none;
+            margin-top: 8px;
+            padding: 10px 12px;
+            background: #f9fafb;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            color: #4b5563;
+            line-height: 1.5;
+            border-left: 3px solid #d1d5db;
+        }
+
+        .inline-summary.visible {
+            display: block;
+        }
+
+        .status-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-label {
+            font-size: 0.7rem;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            font-weight: 500;
         }
 
         .loading-spinner {
@@ -743,50 +776,130 @@
                     <div class="retailer-actions" id="actions-${index}">
                         ${getStockDisplay(retailer, index)}
                     </div>
-                    <div class="call-summary" id="summary-${index}" style="display: none;"></div>
                 </div>
             `).join('');
+
+            // Auto-check website stock for retailers with scrapers
+            retailers.forEach((retailer, index) => {
+                if (retailer.has_website_scraper) {
+                    checkWebsiteStock(retailer.name, index);
+                }
+            });
+        }
+
+        async function checkWebsiteStock(retailerName, index) {
+            const webStock = document.getElementById(`webStock-${index}`);
+            if (!webStock) return;
+
+            // Show checking state
+            webStock.className = 'stock-status stock-unknown';
+            webStock.innerHTML = '<span class="stock-indicator"></span><span>Checking...</span>';
+
+            try {
+                const response = await fetch(`/api/website-stock/${encodeURIComponent(retailerName)}`);
+                const data = await response.json();
+
+                if (data.status === 'in_stock') {
+                    webStock.className = 'stock-status stock-in-stock';
+                    webStock.innerHTML = '<span class="stock-indicator"></span><span>In Stock!</span>';
+                } else if (data.status === 'out_of_stock') {
+                    webStock.className = 'stock-status stock-out-of-stock';
+                    webStock.innerHTML = '<span class="stock-indicator"></span><span>Out of Stock</span>';
+                } else if (data.status === 'call_for_availability') {
+                    webStock.className = 'stock-status stock-unknown';
+                    webStock.innerHTML = '<span class="stock-indicator"></span><span>Call to Confirm</span>';
+                } else {
+                    webStock.className = 'stock-status stock-unknown';
+                    webStock.innerHTML = '<span class="stock-indicator"></span><span>Unknown</span>';
+                }
+            } catch (error) {
+                webStock.className = 'stock-status stock-unknown';
+                webStock.innerHTML = '<span class="stock-indicator"></span><span>Check Failed</span>';
+            }
         }
 
         function getStockDisplay(retailer, index) {
-            // For now, we don't have online stock data, so show "Stock unknown" with call button
-            // In the future, this could check an API for online stock levels
+            // Website status: "Checking..." if scraper available, "N/A" otherwise
+            // Phone status: populated after Tic makes a call
+
+            const websiteStatusHtml = retailer.has_website_scraper
+                ? `<div class="stock-status stock-unknown" id="webStock-${index}">
+                       <span class="stock-indicator"></span>
+                       <span>Checking...</span>
+                   </div>`
+                : `<div class="stock-status stock-unknown" id="webStock-${index}">
+                       <span class="stock-indicator"></span>
+                       <span>N/A</span>
+                   </div>`;
 
             if (!retailer.phone) {
                 return `
-                    <div class="stock-status stock-unknown">
-                        <span class="stock-indicator"></span>
-                        <span>No phone available</span>
+                    <div class="status-group">
+                        <div class="status-item">
+                            <span class="status-label">Website</span>
+                            ${websiteStatusHtml}
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Phone</span>
+                            <div class="stock-status stock-unknown">
+                                <span class="stock-indicator"></span>
+                                <span>No phone available</span>
+                            </div>
+                        </div>
                     </div>
                 `;
             }
 
             return `
-                <div class="stock-status stock-unknown" id="stock-${index}">
-                    <span class="stock-indicator"></span>
-                    <span>Stock unknown</span>
+                <div class="status-group">
+                    <div class="status-item">
+                        <span class="status-label">Website</span>
+                        ${websiteStatusHtml}
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Phone</span>
+                        <div class="stock-status stock-unknown" id="phoneStock-${index}">
+                            <span class="stock-indicator"></span>
+                            <span>Not called</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary btn-small" onclick="callRetailer(${index})" id="callBtn-${index}">
+                        Let Tic Inquire
+                    </button>
+                    <span class="summary-toggle" id="summaryToggle-${index}" style="display: none;" onclick="toggleSummary(${index})">
+                        <span class="chevron">▶</span> Summary
+                    </span>
                 </div>
-                <button class="btn btn-secondary btn-small" onclick="callRetailer(${index})" id="callBtn-${index}">
-                    Let Tic Inquire
-                </button>
-                <span class="status-badge" id="status-${index}" style="display: none;"></span>
+                <div class="inline-summary" id="inlineSummary-${index}"></div>
             `;
+        }
+
+        function toggleSummary(index) {
+            const toggle = document.getElementById(`summaryToggle-${index}`);
+            const summary = document.getElementById(`inlineSummary-${index}`);
+
+            if (toggle && summary) {
+                toggle.classList.toggle('expanded');
+                summary.classList.toggle('visible');
+            }
         }
 
         async function callRetailer(index) {
             const retailer = retailers[index];
             const callBtn = document.getElementById(`callBtn-${index}`);
-            const statusBadge = document.getElementById(`status-${index}`);
-            const stockStatus = document.getElementById(`stock-${index}`);
-            const summaryDiv = document.getElementById(`summary-${index}`);
+            const phoneStock = document.getElementById(`phoneStock-${index}`);
+            const inlineSummary = document.getElementById(`inlineSummary-${index}`);
 
             if (!callBtn) return;
 
             callBtn.disabled = true;
             callBtn.innerHTML = '<div class="loading-spinner"></div> Calling...';
-            statusBadge.style.display = 'inline-block';
-            statusBadge.className = 'status-badge status-calling';
-            statusBadge.textContent = 'Calling...';
+
+            // Update phone status to show calling state
+            if (phoneStock) {
+                phoneStock.className = 'stock-status stock-unknown';
+                phoneStock.innerHTML = '<span class="stock-indicator"></span><span>Calling...</span>';
+            }
 
             try {
                 const response = await fetch('/api/call', {
@@ -809,18 +922,27 @@
             } catch (error) {
                 callBtn.disabled = false;
                 callBtn.innerHTML = 'Let Tic Inquire';
-                statusBadge.className = 'status-badge status-unknown';
-                statusBadge.textContent = 'Error';
-                summaryDiv.style.display = 'block';
-                summaryDiv.textContent = 'Error: ' + error.message;
+                if (phoneStock) {
+                    phoneStock.className = 'stock-status stock-unknown';
+                    phoneStock.innerHTML = '<span class="stock-indicator"></span><span>Error</span>';
+                }
+                if (inlineSummary) {
+                    inlineSummary.textContent = 'Error: ' + error.message;
+                    inlineSummary.classList.add('visible');
+                    const toggle = document.getElementById(`summaryToggle-${index}`);
+                    if (toggle) {
+                        toggle.style.display = 'inline-flex';
+                        toggle.classList.add('expanded');
+                    }
+                }
             }
         }
 
         async function pollCallStatus(callId, index) {
             const callBtn = document.getElementById(`callBtn-${index}`);
-            const statusBadge = document.getElementById(`status-${index}`);
-            const stockStatus = document.getElementById(`stock-${index}`);
-            const summaryDiv = document.getElementById(`summary-${index}`);
+            const phoneStock = document.getElementById(`phoneStock-${index}`);
+            const summaryToggle = document.getElementById(`summaryToggle-${index}`);
+            const inlineSummary = document.getElementById(`inlineSummary-${index}`);
 
             try {
                 const response = await fetch(`/api/call/${callId}`);
@@ -830,27 +952,26 @@
                     if (callBtn) callBtn.style.display = 'none';
 
                     if (data.inventory_status === 'in_stock') {
-                        statusBadge.className = 'status-badge status-in-stock';
-                        statusBadge.textContent = '✓ In Stock';
-                        if (stockStatus) {
-                            stockStatus.className = 'stock-status stock-in-stock';
-                            stockStatus.innerHTML = '<span class="stock-indicator"></span><span>In Stock!</span>';
+                        if (phoneStock) {
+                            phoneStock.className = 'stock-status stock-in-stock';
+                            phoneStock.innerHTML = '<span class="stock-indicator"></span><span>In Stock!</span>';
                         }
                     } else if (data.inventory_status === 'out_of_stock') {
-                        statusBadge.className = 'status-badge status-out-of-stock';
-                        statusBadge.textContent = '✗ Out of Stock';
-                        if (stockStatus) {
-                            stockStatus.className = 'stock-status stock-out-of-stock';
-                            stockStatus.innerHTML = '<span class="stock-indicator"></span><span>Out of Stock</span>';
+                        if (phoneStock) {
+                            phoneStock.className = 'stock-status stock-out-of-stock';
+                            phoneStock.innerHTML = '<span class="stock-indicator"></span><span>Out of Stock</span>';
                         }
                     } else {
-                        statusBadge.className = 'status-badge status-unknown';
-                        statusBadge.textContent = '? Unknown';
+                        if (phoneStock) {
+                            phoneStock.className = 'stock-status stock-unknown';
+                            phoneStock.innerHTML = '<span class="stock-indicator"></span><span>Unknown</span>';
+                        }
                     }
 
-                    if (data.summary) {
-                        summaryDiv.style.display = 'block';
-                        summaryDiv.textContent = data.summary;
+                    // Show collapsible summary
+                    if (data.summary && summaryToggle && inlineSummary) {
+                        summaryToggle.style.display = 'inline-flex';
+                        inlineSummary.textContent = data.summary;
                     }
 
                     // Update global stats
@@ -864,8 +985,10 @@
                     callBtn.disabled = false;
                     callBtn.innerHTML = 'Let Tic Inquire';
                 }
-                statusBadge.className = 'status-badge status-unknown';
-                statusBadge.textContent = 'Error';
+                if (phoneStock) {
+                    phoneStock.className = 'stock-status stock-unknown';
+                    phoneStock.innerHTML = '<span class="stock-indicator"></span><span>Error</span>';
+                }
             }
         }
 
@@ -921,12 +1044,13 @@
             let totalCalled = 0;
 
             for (let i = 0; i < retailers.length; i++) {
-                const statusBadge = document.getElementById(`status-${i}`);
-                if (statusBadge && statusBadge.style.display !== 'none') {
+                const phoneStock = document.getElementById(`phoneStock-${i}`);
+                // Check if this retailer has been called (phone status is no longer "Not called")
+                if (phoneStock && !phoneStock.innerHTML.includes('Not called')) {
                     totalCalled++;
-                    if (statusBadge.classList.contains('status-in-stock')) inStock++;
-                    else if (statusBadge.classList.contains('status-out-of-stock')) outOfStock++;
-                    else if (statusBadge.classList.contains('status-unknown')) unknown++;
+                    if (phoneStock.classList.contains('stock-in-stock')) inStock++;
+                    else if (phoneStock.classList.contains('stock-out-of-stock')) outOfStock++;
+                    else unknown++;
                 }
             }
 

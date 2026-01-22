@@ -19,6 +19,7 @@ from config import WATCH_CONFIG, SEARCH_CONFIG
 from scraper import TudorScraper, Retailer
 from filter import RetailerFilter
 from phone_caller import InventoryChecker, InventoryStatus, BlandAICaller
+from website_scraper import WebsiteStockChecker, WebsiteStockStatus
 
 # Import BLAND_CONFIG safely (note: config.py uses BLAND_CONFIG, not BLAND_AI_CONFIG)
 try:
@@ -93,6 +94,9 @@ retailer_cache = RetailerCache()
 
 # In-memory storage for call jobs (for both single and batch calls)
 call_jobs = {}
+
+# Website stock checker instance
+website_stock_checker = WebsiteStockChecker()
 
 
 # ============================================================
@@ -227,7 +231,8 @@ async def search_retailers(zip_code: str, radius: float = 50):
                 "website": retailer.website,
                 "distance": round(distance, 1),
                 "retailer_type": retailer.retailer_type,
-                "has_phone": bool(retailer.phone)
+                "has_phone": bool(retailer.phone),
+                "has_website_scraper": website_stock_checker.has_scraper(retailer.name)
             })
 
         return {
@@ -382,6 +387,47 @@ async def health_check():
         "timestamp": datetime.now().isoformat(),
         "retailers_cached": retailer_cache.is_loaded,
         "retailers_count": len(retailer_cache.get_retailers()) if retailer_cache.is_loaded else 0
+    }
+
+
+@app.get("/api/website-stock/{retailer_name}")
+async def check_website_stock(retailer_name: str):
+    """Check website stock for a specific retailer"""
+    reference = WATCH_CONFIG.get("reference", "M79930-0007")
+
+    # Check if we have a scraper for this retailer
+    if not website_stock_checker.has_scraper(retailer_name):
+        return {
+            "retailer_name": retailer_name,
+            "has_scraper": False,
+            "status": "no_scraper",
+            "message": f"No website scraper available for {retailer_name}"
+        }
+
+    try:
+        result = website_stock_checker.check_stock(retailer_name, reference)
+        return {
+            "retailer_name": result.retailer_name,
+            "has_scraper": True,
+            "status": result.status.value,
+            "message": result.message,
+            "product_url": result.product_url,
+            "price": result.price
+        }
+    except Exception as e:
+        return {
+            "retailer_name": retailer_name,
+            "has_scraper": True,
+            "status": "scraper_error",
+            "message": f"Error checking website: {str(e)}"
+        }
+
+
+@app.get("/api/supported-retailers")
+async def get_supported_retailers():
+    """Get list of retailers with website scrapers"""
+    return {
+        "retailers": website_stock_checker.get_supported_retailers()
     }
 
 
