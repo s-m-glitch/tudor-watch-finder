@@ -20,6 +20,7 @@ from scraper import TudorScraper, Retailer
 from filter import RetailerFilter
 from phone_caller import InventoryChecker, InventoryStatus, BlandAICaller
 from website_scraper import WebsiteStockChecker, WebsiteStockStatus
+from summarizer import summarize_transcript
 
 # Import BLAND_CONFIG safely (note: config.py uses BLAND_CONFIG, not BLAND_AI_CONFIG)
 try:
@@ -337,27 +338,30 @@ async def run_single_call_background(job_id: str, retailer_name: str, phone: str
         caller = BlandAICaller(api_key)
         result = caller.make_call(phone, retailer_name)
 
-        # Store result
-        # Generate a fallback summary if Bland AI didn't provide one
-        summary = result.summary
+        # Generate summary using Claude if we have a transcript
+        summary = ""
+        if result.transcript and result.transcript.strip():
+            print(f"Generating summary with Claude for {retailer_name}...")
+            summary = summarize_transcript(result.transcript, retailer_name)
+            print(f"  Summary: {summary[:100]}...")
 
-        # Debug: log what we got from Bland
-        if result.raw_response:
-            print(f"Bland API response keys: {list(result.raw_response.keys())}")
-            if 'summary' in result.raw_response:
-                print(f"  summary field: {result.raw_response.get('summary')}")
-            if 'analysis' in result.raw_response:
-                print(f"  analysis field: {result.raw_response.get('analysis')}")
-
+        # Fallback if Claude summarization failed or no transcript
         if not summary or summary.strip() == "":
-            status_text = result.status.value.replace("_", " ")
-            summary = f"Call completed. Status: {status_text}."
-            if result.transcript:
-                # Add a brief excerpt from the transcript
-                transcript_preview = result.transcript[:200].strip()
-                if len(result.transcript) > 200:
-                    transcript_preview += "..."
-                summary = f"{summary} Transcript: {transcript_preview}"
+            status_val = result.status.value
+            if status_val == "in_stock":
+                summary = "The retailer confirmed they have the watch in stock."
+            elif status_val == "out_of_stock":
+                summary = "The retailer confirmed they do not have the watch in stock."
+            elif status_val == "waitlist":
+                summary = "The watch is not in stock, but you can join a waitlist or client book."
+            elif status_val == "can_order":
+                summary = "The watch is not in stock, but the retailer can special order it."
+            elif status_val == "no_answer":
+                summary = "Unable to reach the store - no answer or went to voicemail."
+            elif status_val == "call_failed":
+                summary = "The call could not be completed due to a technical issue."
+            else:
+                summary = "Could not determine stock status - may have reached an automated system or the call ended before getting an answer."
 
         call_jobs[job_id]["status"] = "completed"
         call_jobs[job_id]["result"] = {

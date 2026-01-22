@@ -307,6 +307,7 @@ CONVERSATION STYLE:
             data.get('ai_summary') or
             ''
         )
+
         duration = data.get('call_length') or data.get('duration')
 
         # Handle busy/voicemail/no-answer statuses directly
