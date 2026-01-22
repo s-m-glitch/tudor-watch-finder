@@ -237,8 +237,8 @@ CONVERSATION STYLE:
                     data = response.json()
                     status = data.get('status', '')
 
-                    # Check if call is complete
-                    if status in ['completed', 'ended', 'failed', 'no-answer']:
+                    # Check if call is complete - added 'busy' and 'voicemail' statuses
+                    if status in ['completed', 'ended', 'failed', 'no-answer', 'busy', 'voicemail']:
                         return self._parse_call_result(call_id, data)
 
                     print(f"    Call status: {status}...")
@@ -268,6 +268,20 @@ CONVERSATION STYLE:
         transcript = data.get('transcript', '') or data.get('concatenated_transcript', '')
         summary = data.get('summary', '') or data.get('analysis', {}).get('summary', '')
         duration = data.get('call_length') or data.get('duration')
+
+        # Handle busy/voicemail/no-answer statuses directly
+        if status in ['busy', 'no-answer', 'voicemail']:
+            return CallResult(
+                retailer_name="",  # Will be set by caller
+                retailer_phone="",  # Will be set by caller
+                call_id=call_id,
+                status=InventoryStatus.NO_ANSWER,
+                transcript=transcript,
+                summary=f"Call ended with status: {status}",
+                call_duration=duration,
+                timestamp="",  # Will be set by caller
+                raw_response=data
+            )
 
         # Determine inventory status from transcript/summary
         inventory_status = self._analyze_inventory_status(transcript, summary)
