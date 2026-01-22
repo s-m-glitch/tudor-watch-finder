@@ -41,7 +41,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files (create directory if it doesn't exist)
+# Mount static files
 os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -91,11 +91,29 @@ class RetailerCache:
 # Global cache instance
 retailer_cache = RetailerCache()
 
+# In-memory storage for call jobs (for both single and batch calls)
+call_jobs = {}
+
 
 # ============================================================
 # Request Models
 # ============================================================
+class SearchRequest(BaseModel):
+    zip_code: str
+    radius_miles: float = 50
+    api_key: Optional[str] = None
+
+
+class CallRequest(BaseModel):
+    """For batch calls to multiple retailers"""
+    zip_code: str
+    radius_miles: float = 50
+    api_key: str
+    max_calls: int = 5
+
+
 class SingleCallRequest(BaseModel):
+    """For calling a single retailer"""
     retailer_name: str
     phone: str
 
@@ -148,10 +166,8 @@ def get_retailers() -> List[Retailer]:
 
 def get_bland_api_key() -> str:
     """Get Bland AI API key from config"""
-    # Try BLAND_CONFIG first (matches config.py naming)
     if BLAND_CONFIG and BLAND_CONFIG.get("api_key"):
         return BLAND_CONFIG["api_key"]
-    # Fallback to environment variable
     return os.environ.get("BLAND_API_KEY", "")
 
 
@@ -193,10 +209,9 @@ async def cache_status():
 
 @app.get("/api/search")
 async def search_retailers(zip_code: str, radius: float = 50):
-    """Search for retailers near a zip code"""
+    """Search for retailers near a zip code (GET version)"""
     try:
         retailers = get_retailers()
-
         filter = RetailerFilter()
         filtered = filter.filter_by_zip_code(retailers, zip_code, radius)
 
@@ -228,22 +243,77 @@ async def search_retailers(zip_code: str, radius: float = 50):
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
 
+@app.post("/api/search")
+async def search_retailers_post(request: SearchRequest):
+    """Search for retailers near a zip code (POST version)"""
+    try:
+        retailers = get_retailers()
+        filter = RetailerFilter()
+        filtered = filter.filter_by_zip_code(retailers, request.zip_code, request.radius_miles)
+
+        results = []
+        for retailer, distance in filtered:
+            results.append({
+                "name": retailer.name,
+                "address": retailer.address,
+                "city": retailer.city,
+                "state": retailer.state,
+                "zip_code": retailer.zip_code,
+                "phone": retailer.phone,
+                "website": retailer.website,
+                "distance_miles": round(distance, 1),
+                "retailer_type": retailer.retailer_type,
+                "has_phone": bool(retailer.phone)
+            })
+
+        return {
+            "zip_code": request.zip_code,
+            "radius_miles": request.radius_miles,
+            "total_retailers": len(results),
+            "with_phone": sum(1 for r in results if r["has_phone"]),
+            "retailers": results[:20],
+            "has_more": len(results) > 20,
+            "cache_status": "loaded" if retailer_cache.is_loaded else "loading"
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+
+
 @app.post("/api/call")
-async def make_call(request: SingleCallRequest):
-    """Start a phone call to check inventory at a single retailer"""
+async def make_single_call(request: SingleCallRequest, background_tasks: BackgroundTasks):
+    """Start a phone call to check inventory at a SINGLE retailer"""
     api_key = get_bland_api_key()
     if not api_key:
         raise HTTPException(status_code=400, detail="Bland AI API key not configured")
 
     try:
-        caller = BlandAICaller(api_key)
-        call_id = caller.start_call(request.phone, request.retailer_name)
+        # Create a unique job ID for this call
+        job_id = f"call_{datetime.now().timestamp()}"
 
-        if not call_id:
-            raise HTTPException(status_code=500, detail="Failed to start call")
+        # Initialize job status
+        call_jobs[job_id] = {
+            "status": "starting",
+            "retailer_name": request.retailer_name,
+            "phone": request.phone,
+            "result": None,
+            "error": None,
+            "started_at": datetime.now().isoformat()
+        }
+
+        # Start the call in background
+        background_tasks.add_task(
+            run_single_call_background,
+            job_id,
+            request.retailer_name,
+            request.phone,
+            api_key
+        )
 
         return {
-            "call_id": call_id,
+            "call_id": job_id,
             "retailer_name": request.retailer_name,
             "phone": request.phone,
             "status": "started"
@@ -253,33 +323,55 @@ async def make_call(request: SingleCallRequest):
         raise HTTPException(status_code=500, detail=f"Failed to start call: {str(e)}")
 
 
+async def run_single_call_background(job_id: str, retailer_name: str, phone: str, api_key: str):
+    """Background task to make a single phone call"""
+    try:
+        call_jobs[job_id]["status"] = "in_progress"
+
+        # Create caller and make the call (this is synchronous and waits for completion)
+        caller = BlandAICaller(api_key)
+        result = caller.make_call(phone, retailer_name)
+
+        # Store result
+        call_jobs[job_id]["status"] = "completed"
+        call_jobs[job_id]["result"] = {
+            "retailer_name": result.retailer_name,
+            "phone": result.retailer_phone,
+            "inventory_status": result.status.value,
+            "summary": result.summary,
+            "transcript": result.transcript,
+            "call_duration": result.call_duration
+        }
+        call_jobs[job_id]["completed_at"] = datetime.now().isoformat()
+
+    except Exception as e:
+        call_jobs[job_id]["status"] = "failed"
+        call_jobs[job_id]["error"] = str(e)
+
+
 @app.get("/api/call/{call_id}")
 async def get_call_status(call_id: str):
     """Get the status of a phone call"""
-    api_key = get_bland_api_key()
-    if not api_key:
-        raise HTTPException(status_code=400, detail="Bland AI API key not configured")
+    if call_id not in call_jobs:
+        raise HTTPException(status_code=404, detail="Call job not found")
 
-    try:
-        caller = BlandAICaller(api_key)
-        result = caller.get_call_result(call_id)
+    job = call_jobs[call_id]
 
-        if result is None:
-            return {
-                "call_id": call_id,
-                "status": "in_progress"
-            }
+    response = {
+        "call_id": call_id,
+        "status": job["status"],
+        "retailer_name": job.get("retailer_name"),
+        "phone": job.get("phone")
+    }
 
-        return {
-            "call_id": call_id,
-            "status": "completed" if result.status != InventoryStatus.UNKNOWN else "failed",
-            "inventory_status": result.status.value,
-            "summary": result.summary,
-            "retailer_name": result.retailer_name
-        }
+    if job["status"] == "completed" and job.get("result"):
+        response["inventory_status"] = job["result"]["inventory_status"]
+        response["summary"] = job["result"]["summary"]
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get call status: {str(e)}")
+    if job["status"] == "failed":
+        response["error"] = job.get("error")
+
+    return response
 
 
 @app.get("/api/health")
