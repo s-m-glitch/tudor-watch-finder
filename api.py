@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import threading
 
-from config import WATCH_CONFIG, SEARCH_CONFIG
+from config import WATCH_CONFIG, SEARCH_CONFIG, BLAND_AI_CONFIG
 from scraper import TudorScraper, Retailer
 from filter import RetailerFilter
 from phone_caller import InventoryChecker, InventoryStatus, BlandAICaller
@@ -35,12 +35,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files - THIS WAS MISSING!
+# Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ============================================================
 # GLOBAL IN-MEMORY CACHE
-# This persists for the lifetime of the server process
 # ============================================================
 class RetailerCache:
     """Thread-safe in-memory cache for retailers"""
@@ -71,7 +70,6 @@ class RetailerCache:
             print(f"Cache updated: {len(retailers)} retailers loaded at {self._load_time}")
 
     def start_loading(self) -> bool:
-        """Returns True if this call started the loading, False if already loading"""
         with self._lock:
             if self._loading:
                 return False
@@ -86,33 +84,18 @@ class RetailerCache:
 # Global cache instance
 retailer_cache = RetailerCache()
 
-# In-memory storage for call jobs
-call_jobs = {}
+
+# ============================================================
+# Request Models
+# ============================================================
+class SingleCallRequest(BaseModel):
+    retailer_name: str
+    phone: str
 
 
-class SearchRequest(BaseModel):
-    zip_code: str
-    radius_miles: float = 50
-    api_key: Optional[str] = None
-
-
-class CallRequest(BaseModel):
-    zip_code: str
-    radius_miles: float = 50
-    api_key: str
-    max_calls: int = 5
-
-
-class RetailerResponse(BaseModel):
-    name: str
-    address: str
-    city: str
-    state: str
-    phone: Optional[str]
-    distance_miles: float
-    retailer_type: str
-
-
+# ============================================================
+# Helper Functions
+# ============================================================
 def load_retailers_sync() -> List[Retailer]:
     """Synchronously load/scrape retailers"""
     print("Starting retailer scrape...")
@@ -126,16 +109,12 @@ def load_retailers_sync() -> List[Retailer]:
 
 def get_retailers() -> List[Retailer]:
     """Get retailers from cache or trigger a scrape"""
-
-    # If already loaded, return from cache immediately
     if retailer_cache.is_loaded:
         print(f"Returning {len(retailer_cache.get_retailers())} retailers from cache")
         return retailer_cache.get_retailers()
 
-    # If already loading, wait for it to complete
     if retailer_cache.is_loading:
         print("Retailers are being loaded by another request, waiting...")
-        # Wait up to 5 minutes for loading to complete
         for _ in range(300):
             if retailer_cache.is_loaded:
                 return retailer_cache.get_retailers()
@@ -143,7 +122,6 @@ def get_retailers() -> List[Retailer]:
             time.sleep(1)
         raise HTTPException(status_code=503, detail="Timeout waiting for retailers to load")
 
-    # Start loading
     if retailer_cache.start_loading():
         try:
             retailers = load_retailers_sync()
@@ -153,7 +131,6 @@ def get_retailers() -> List[Retailer]:
             retailer_cache.stop_loading()
             raise HTTPException(status_code=500, detail=f"Failed to load retailers: {str(e)}")
     else:
-        # Another thread started loading, wait for it
         for _ in range(300):
             if retailer_cache.is_loaded:
                 return retailer_cache.get_retailers()
@@ -162,14 +139,14 @@ def get_retailers() -> List[Retailer]:
         raise HTTPException(status_code=503, detail="Timeout waiting for retailers to load")
 
 
+# ============================================================
+# API Endpoints
+# ============================================================
 @app.on_event("startup")
 async def startup_event():
-    """Pre-load retailers when the server starts"""
     print("=" * 60)
     print("Tudor Watch Finder API Starting")
     print("=" * 60)
-    # We'll load retailers on first request instead of startup
-    # to avoid blocking the server start
     print("Retailers will be loaded on first search request")
 
 
@@ -202,16 +179,10 @@ async def cache_status():
 async def search_retailers(zip_code: str, radius: float = 50):
     """Search for retailers near a zip code"""
     try:
-        # Get retailers (from cache or scrape)
         retailers = get_retailers()
 
-        # Filter by location
         filter = RetailerFilter()
-        filtered = filter.filter_by_zip_code(
-            retailers,
-            zip_code,
-            radius
-        )
+        filtered = filter.filter_by_zip_code(retailers, zip_code, radius)
 
         results = []
         for retailer, distance in filtered:
@@ -242,27 +213,23 @@ async def search_retailers(zip_code: str, radius: float = 50):
 
 
 @app.post("/api/call")
-async def make_call(retailer_name: str, phone: str, background_tasks: BackgroundTasks):
+async def make_call(request: SingleCallRequest):
     """Start a phone call to check inventory at a single retailer"""
-    from config import BLAND_AI_CONFIG
-
     api_key = BLAND_AI_CONFIG.get("api_key")
     if not api_key:
         raise HTTPException(status_code=400, detail="Bland AI API key not configured")
 
     try:
         caller = BlandAICaller(api_key)
-
-        # Start the call
-        call_id = caller.start_call(phone, retailer_name)
+        call_id = caller.start_call(request.phone, request.retailer_name)
 
         if not call_id:
             raise HTTPException(status_code=500, detail="Failed to start call")
 
         return {
             "call_id": call_id,
-            "retailer_name": retailer_name,
-            "phone": phone,
+            "retailer_name": request.retailer_name,
+            "phone": request.phone,
             "status": "started"
         }
 
@@ -273,8 +240,6 @@ async def make_call(retailer_name: str, phone: str, background_tasks: Background
 @app.get("/api/call/{call_id}")
 async def get_call_status(call_id: str):
     """Get the status of a phone call"""
-    from config import BLAND_AI_CONFIG
-
     api_key = BLAND_AI_CONFIG.get("api_key")
     if not api_key:
         raise HTTPException(status_code=400, detail="Bland AI API key not configured")
@@ -312,7 +277,6 @@ async def health_check():
     }
 
 
-# For local development
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
