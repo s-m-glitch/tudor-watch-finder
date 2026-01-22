@@ -68,12 +68,20 @@ Summary:"""
 def summarize_transcript(transcript: str, retailer_name: str) -> str:
     """Quick function to summarize a transcript"""
     try:
+        # Debug: check if env var is set
+        api_key = os.environ.get('ANTHROPIC_API_KEY')
+        print(f"  ANTHROPIC_API_KEY present: {bool(api_key)}")
+        if api_key:
+            print(f"  Key starts with: {api_key[:10]}...")
+
         summarizer = TranscriptSummarizer()
         return summarizer.summarize(transcript, retailer_name)
-    except ValueError:
+    except ValueError as e:
         # No API key configured
+        print(f"  ValueError: {e}")
         return "Summary not available (API key not configured)."
     except Exception as e:
+        print(f"  Exception: {e}")
         return f"Summary generation failed: {str(e)}"
 
 
