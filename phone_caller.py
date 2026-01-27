@@ -452,7 +452,10 @@ CONVERSATION STYLE:
             "got one here", "got it here", "have that model",
             "have the ranger", "have that watch",
             "confirmed that the watch is available",  # From Bland summary
-            "watch is in stock", "model is available"
+            "watch is in stock", "model is available",
+            "dial in stock", "beige dial in stock",  # From Claude summary
+            "they had the", "had the tudor", "had it in stock",
+            "have the tudor", "has the tudor"
         ]
 
         for phrase in in_stock_phrases:
