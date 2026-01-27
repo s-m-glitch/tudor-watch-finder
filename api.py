@@ -48,6 +48,19 @@ os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ============================================================
+# STARTUP: Log environment variables for debugging
+# ============================================================
+print("=" * 60)
+print("STARTUP: Checking environment variables...")
+print(f"  BLAND_API_KEY present: {bool(os.environ.get('BLAND_API_KEY'))}")
+print(f"  ANTHROPIC_API_KEY present: {bool(os.environ.get('ANTHROPIC_API_KEY'))}")
+# Check for common variations/typos
+for key in os.environ:
+    if 'ANTHROPIC' in key.upper() or 'CLAUDE' in key.upper():
+        print(f"  Found env var: {key} = {os.environ[key][:10]}...")
+print("=" * 60)
+
+# ============================================================
 # GLOBAL IN-MEMORY CACHE
 # ============================================================
 class RetailerCache:

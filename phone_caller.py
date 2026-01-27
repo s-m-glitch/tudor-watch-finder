@@ -358,6 +358,9 @@ CONVERSATION STYLE:
             InventoryStatus enum value
         """
         text = f"{transcript} {summary}".lower()
+        print(f"  Analyzing inventory status...")
+        print(f"  Text length: {len(text)} chars")
+        print(f"  First 200 chars: {text[:200]}...")
 
         # First check for automated systems / IVR / hold messages
         # These mean we didn't actually talk to anyone
@@ -439,18 +442,22 @@ CONVERSATION STYLE:
         in_stock_phrases = [
             "we have it", "we do have", "yes we have", "have it in stock",
             "have one in stock", "have them in stock",
-            "it's available", "it is available",
+            "it's available", "it is available", "is available",
+            "watch is available", "that is available", "that's available",
             "they're available", "they are available",
             "yes we do", "we do have that", "we have that one",
             "we currently have", "do have it", "in stock now",
             "available now", "ready for pickup", "can come in today",
             "come pick it up", "have it here", "we have one",
             "got one here", "got it here", "have that model",
-            "have the ranger", "have that watch"
+            "have the ranger", "have that watch",
+            "confirmed that the watch is available",  # From Bland summary
+            "watch is in stock", "model is available"
         ]
 
         for phrase in in_stock_phrases:
             if phrase in text:
+                print(f"  -> Matched IN_STOCK phrase: '{phrase}'")
                 return InventoryStatus.IN_STOCK
 
         # Check for waitlist mentions without explicit out of stock
