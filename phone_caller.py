@@ -402,7 +402,10 @@ CONVERSATION STYLE:
             "unavailable", "no longer", "discontinued", "can't get",
             "cannot get", "unable to", "don't currently have",
             "do not currently have", "not currently in stock",
-            "currently not in stock", "currently unavailable"
+            "currently not in stock", "currently unavailable",
+            # From Claude summaries
+            "did not have the tudor", "did not have the watch",
+            "do not have the tudor", "do not have the watch"
         ]
 
         for phrase in out_of_stock_phrases:
@@ -417,7 +420,12 @@ CONVERSATION STYLE:
                     "register.*interest", "take your information",
                     "client book", "client list", "come into the store",
                     "stop by", "visit.*store", "in-store visit", "in store visit",
-                    "happy to add you", "add you if you"
+                    "happy to add you", "add you if you",
+                    # From Claude summaries
+                    "offered to add", "add the customer to a",
+                    "add their name to", "waitlist is available",
+                    "visit the store in person", "register their interest",
+                    "reach out to add", "get added to"
                 ]
                 for wp in waitlist_phrases:
                     if re.search(wp, text):
