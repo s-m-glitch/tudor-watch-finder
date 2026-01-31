@@ -417,31 +417,38 @@ CONVERSATION STYLE:
                     "waitlist", "waiting list", "wait list", "interest list",
                     "put you on a list", "add you to a list", "notify you",
                     "call you when", "contact you when", "let you know when",
+                    "call them when", "contact them when",  # Third person from summaries
                     "register.*interest", "take your information",
                     "client book", "client list", "come into the store",
                     "stop by", "visit.*store", "in-store visit", "in store visit",
                     "happy to add you", "add you if you",
                     # From Claude summaries
-                    "offered to add", "add the customer to a",
-                    "add their name to", "waitlist is available",
+                    "offered to add", "add the customer", "add the caller",
+                    "add their name", "waitlist is available",
                     "visit the store in person", "register their interest",
-                    "reach out to add", "get added to"
+                    "reach out to add", "get added to",
+                    "for a callback", "callback when", "call back when",
+                    "take.*information", "caller's information",
+                    "when the watch becomes available", "when it becomes available",
+                    "when available", "becomes available"
                 ]
                 for wp in waitlist_phrases:
                     if re.search(wp, text):
+                        print(f"  -> Matched WAITLIST phrase: '{wp}'")
                         return InventoryStatus.WAITLIST
 
                 # Check for can order
                 can_order_phrases = [
                     "can order", "could order", "special order", "order it for you",
                     "order one for you", "place an order", "get it in",
-                    "take a few weeks", "take some time", "within a month",
                     "expect.*shipment", "expecting.*shipment", "more coming"
                 ]
                 for cop in can_order_phrases:
                     if re.search(cop, text):
+                        print(f"  -> Matched CAN_ORDER phrase: '{cop}'")
                         return InventoryStatus.CAN_ORDER
 
+                print(f"  -> No waitlist/order phrases found, returning OUT_OF_STOCK")
                 return InventoryStatus.OUT_OF_STOCK
 
         # Now check for POSITIVE indicators (only if no negative indicators found)

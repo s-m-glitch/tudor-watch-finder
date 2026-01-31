@@ -335,6 +335,22 @@
             background: #9ca3af;
         }
 
+        .stock-waitlist {
+            color: #d97706;
+        }
+
+        .stock-waitlist .stock-indicator {
+            background: #f59e0b;
+        }
+
+        .stock-no-answer {
+            color: #6b7280;
+        }
+
+        .stock-no-answer .stock-indicator {
+            background: #9ca3af;
+        }
+
         .call-summary {
             margin-top: 12px;
             padding: 12px;
@@ -963,24 +979,24 @@
                                 phoneStock.innerHTML = '<span class="stock-indicator"></span><span>Out of Stock</span>';
                                 break;
                             case 'waitlist':
-                                phoneStock.className = 'stock-status stock-unknown';
-                                phoneStock.innerHTML = '<span class="stock-indicator"></span><span>Waitlist Available</span>';
+                                phoneStock.className = 'stock-status stock-waitlist';
+                                phoneStock.innerHTML = '<span class="stock-indicator"></span><span>Waitlist</span>';
                                 break;
                             case 'can_order':
-                                phoneStock.className = 'stock-status stock-unknown';
+                                phoneStock.className = 'stock-status stock-waitlist';
                                 phoneStock.innerHTML = '<span class="stock-indicator"></span><span>Can Order</span>';
                                 break;
                             case 'no_answer':
-                                phoneStock.className = 'stock-status stock-unknown';
+                                phoneStock.className = 'stock-status stock-no-answer';
                                 phoneStock.innerHTML = '<span class="stock-indicator"></span><span>No Answer</span>';
                                 break;
                             case 'call_failed':
-                                phoneStock.className = 'stock-status stock-unknown';
+                                phoneStock.className = 'stock-status stock-no-answer';
                                 phoneStock.innerHTML = '<span class="stock-indicator"></span><span>Call Failed</span>';
                                 break;
                             default:
                                 phoneStock.className = 'stock-status stock-unknown';
-                                phoneStock.innerHTML = '<span class="stock-indicator"></span><span>Unknown</span>';
+                                phoneStock.innerHTML = '<span class="stock-indicator"></span><span>Not Available</span>';
                         }
                     }
 
