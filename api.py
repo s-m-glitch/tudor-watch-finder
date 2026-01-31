@@ -366,9 +366,18 @@ def run_single_call_background(job_id: str, retailer_name: str, phone: str, api_
                 print(f"[{job_id}] Error generating summary: {sum_err}")
                 summary = ""
 
+        # Re-analyze inventory status using BOTH transcript AND Claude summary
+        # This catches cases where the summary has clearer language than the transcript
+        if summary:
+            print(f"[{job_id}] Re-analyzing inventory status with Claude summary...")
+            final_status = caller._analyze_inventory_status(result.transcript or "", summary)
+            print(f"[{job_id}] Final status after re-analysis: {final_status.value}")
+        else:
+            final_status = result.status
+
         # Fallback if Claude summarization failed or no transcript
         if not summary or summary.strip() == "":
-            status_val = result.status.value
+            status_val = final_status.value
             if status_val == "in_stock":
                 summary = "The retailer confirmed they have the watch in stock."
             elif status_val == "out_of_stock":
@@ -388,7 +397,7 @@ def run_single_call_background(job_id: str, retailer_name: str, phone: str, api_
         call_jobs[job_id]["result"] = {
             "retailer_name": result.retailer_name,
             "phone": result.retailer_phone,
-            "inventory_status": result.status.value,
+            "inventory_status": final_status.value,
             "summary": summary,
             "transcript": result.transcript,
             "call_duration": result.call_duration
