@@ -636,7 +636,8 @@
             <div class="watch-hero">
                 <div class="watch-image">
                     <img id="watchImage" src="/static/watch.png"
-                         alt="Tudor Watch">
+                         alt="Tudor Watch"
+                         onerror="this.src='/static/watch.png'">
                 </div>
                 <div class="watch-details">
                     <h2 id="watchModel">Tudor Ranger</h2>
@@ -800,10 +801,7 @@
             `;
             document.getElementById('watchSpecs').innerHTML = specsHtml;
 
-            // Update image if available
-            if (selectedWatch.image) {
-                document.getElementById('watchImage').src = selectedWatch.image;
-            }
+            // Keep using local image (external URLs don't work)
             document.getElementById('watchImage').alt = selectedWatch.full_name;
         }
 
