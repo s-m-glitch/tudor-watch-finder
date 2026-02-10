@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import threading
 
-from config import WATCH_CONFIG, SEARCH_CONFIG
+from config import WATCH_CONFIG, WATCHES, DEFAULT_WATCH, SEARCH_CONFIG
 from scraper import TudorScraper, Retailer
 from filter import RetailerFilter
 from phone_caller import InventoryChecker, InventoryStatus, BlandAICaller
@@ -134,6 +134,7 @@ class SingleCallRequest(BaseModel):
     """For calling a single retailer"""
     retailer_name: str
     phone: str
+    watch_reference: Optional[str] = None  # Which watch to ask about
 
 
 # ============================================================
@@ -206,11 +207,24 @@ async def root():
     return FileResponse("static/index.html")
 
 
-@app.get("/api/watch")
-async def get_watch_info():
-    """Get information about the target watch"""
+@app.get("/api/watches")
+async def get_all_watches():
+    """Get all available watches"""
     return {
-        "watch": WATCH_CONFIG,
+        "watches": list(WATCHES.values()),
+        "default": DEFAULT_WATCH
+    }
+
+
+@app.get("/api/watch")
+async def get_watch_info(reference: Optional[str] = None):
+    """Get information about a specific watch (or default)"""
+    if reference and reference in WATCHES:
+        watch = WATCHES[reference]
+    else:
+        watch = WATCH_CONFIG
+    return {
+        "watch": watch,
         "default_search": SEARCH_CONFIG
     }
 
@@ -308,6 +322,12 @@ async def make_single_call(request: SingleCallRequest, background_tasks: Backgro
     if not api_key:
         raise HTTPException(status_code=400, detail="Bland AI API key not configured")
 
+    # Get watch config - use specified reference or default
+    watch_ref = request.watch_reference or DEFAULT_WATCH
+    if watch_ref not in WATCHES:
+        watch_ref = DEFAULT_WATCH
+    watch_config = WATCHES[watch_ref]
+
     try:
         # Create a unique job ID for this call
         job_id = f"call_{datetime.now().timestamp()}"
@@ -317,6 +337,7 @@ async def make_single_call(request: SingleCallRequest, background_tasks: Backgro
             "status": "starting",
             "retailer_name": request.retailer_name,
             "phone": request.phone,
+            "watch_reference": watch_ref,
             "result": None,
             "error": None,
             "started_at": datetime.now().isoformat()
@@ -328,13 +349,15 @@ async def make_single_call(request: SingleCallRequest, background_tasks: Backgro
             job_id,
             request.retailer_name,
             request.phone,
-            api_key
+            api_key,
+            watch_config
         )
 
         return {
             "call_id": job_id,
             "retailer_name": request.retailer_name,
             "phone": request.phone,
+            "watch_reference": watch_ref,
             "status": "started"
         }
 
@@ -342,15 +365,17 @@ async def make_single_call(request: SingleCallRequest, background_tasks: Backgro
         raise HTTPException(status_code=500, detail=f"Failed to start call: {str(e)}")
 
 
-def run_single_call_background(job_id: str, retailer_name: str, phone: str, api_key: str):
+def run_single_call_background(job_id: str, retailer_name: str, phone: str, api_key: str, watch_config: dict = None):
     """Background task to make a single phone call (runs synchronously in thread pool)"""
     try:
+        watch = watch_config or WATCH_CONFIG
         print(f"[{job_id}] Starting background call to {retailer_name} at {phone}")
+        print(f"[{job_id}] Watch: {watch['full_name']}")
         call_jobs[job_id]["status"] = "in_progress"
 
         # Create caller and make the call (this is synchronous and waits for completion)
         print(f"[{job_id}] Creating BlandAICaller...")
-        caller = BlandAICaller(api_key)
+        caller = BlandAICaller(api_key, watch_config=watch)
         print(f"[{job_id}] Making call...")
         result = caller.make_call(phone, retailer_name)
         print(f"[{job_id}] Call completed with status: {result.status.value}")

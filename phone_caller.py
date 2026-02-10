@@ -54,12 +54,13 @@ class BlandAICaller:
     Bland AI Documentation: https://docs.bland.ai/
     """
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, watch_config: Optional[Dict] = None):
         """
         Initialize the Bland AI caller
 
         Args:
             api_key: Bland AI API key (or set BLAND_API_KEY env var)
+            watch_config: Watch configuration dict (uses default if not provided)
         """
         self.api_key = api_key or os.environ.get('BLAND_API_KEY') or BLAND_CONFIG.get('api_key')
         if not self.api_key:
@@ -70,10 +71,11 @@ class BlandAICaller:
             "Authorization": self.api_key,
             "Content-Type": "application/json"
         }
+        self.watch_config = watch_config or WATCH_CONFIG
 
     def _build_call_prompt(self) -> str:
         """Build the AI prompt for the phone call"""
-        watch = WATCH_CONFIG
+        watch = self.watch_config
 
         prompt = f"""You are calling a watch store to inquire about a specific Tudor watch.
 
@@ -86,7 +88,7 @@ WATCH DETAILS:
 
 YOUR TASK:
 1. Greet the store representative politely
-2. Ask if they have the Tudor Ranger 36mm with beige dial in stock (reference M79930-0007)
+2. Ask if they have the Tudor {watch['model']} {watch['case_size']} with {watch['dial'].lower()} in stock (reference {watch['reference']})
 3. If they don't have it, ask about:
    - When they might get it in stock
    - If there's a waitlist you could join
@@ -109,7 +111,8 @@ CONVERSATION STYLE:
 
     def _build_call_task(self) -> str:
         """Build the specific task/goal for the call"""
-        return f"Find out if the store has the Tudor Ranger 36mm with beige dial (ref: M79930-0007) in stock, and if not, ask about availability timeline or waitlist options."
+        watch = self.watch_config
+        return f"Find out if the store has the Tudor {watch['model']} {watch['case_size']} with {watch['dial'].lower()} (ref: {watch['reference']}) in stock, and if not, ask about availability timeline or waitlist options."
 
     def make_call(self, phone_number: str, retailer_name: str) -> CallResult:
         """

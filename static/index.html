@@ -58,6 +58,36 @@
             border: 1px solid #e5e7eb;
         }
 
+        .watch-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 12px;
+        }
+
+        .watch-tab {
+            padding: 8px 16px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: #f9fafb;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+            transition: all 0.2s ease;
+        }
+
+        .watch-tab:hover {
+            background: #f3f4f6;
+            border-color: #d1d5db;
+        }
+
+        .watch-tab.active {
+            background: #1a1a2e;
+            color: white;
+            border-color: #1a1a2e;
+        }
+
         .watch-hero {
             display: flex;
             align-items: center;
@@ -599,20 +629,24 @@
 
         <!-- Watch Hero Card -->
         <div class="card">
+            <!-- Watch Selector Tabs -->
+            <div class="watch-tabs" id="watchTabs">
+                <!-- Tabs will be dynamically inserted here -->
+            </div>
             <div class="watch-hero">
                 <div class="watch-image">
-                    <img src="/static/watch.png"
-                         alt="Tudor Ranger 36mm with Beige Dial">
+                    <img id="watchImage" src="/static/watch.png"
+                         alt="Tudor Watch">
                 </div>
                 <div class="watch-details">
-                    <h2>Tudor Ranger</h2>
-                    <p class="reference">M79930-0007</p>
-                    <div class="watch-specs">
+                    <h2 id="watchModel">Tudor Ranger</h2>
+                    <p class="reference" id="watchReference">M79930-0007</p>
+                    <div class="watch-specs" id="watchSpecs">
                         <span class="spec-tag">36mm</span>
                         <span class="spec-tag">Steel Case</span>
                         <span class="spec-tag">Beige Domed Dial</span>
                     </div>
-                    <p class="watch-price">$3,775</p>
+                    <p class="watch-price" id="watchPrice">$3,775</p>
                 </div>
             </div>
         </div>
@@ -713,6 +747,65 @@
         let retailers = [];
         let callsInProgress = 0;
         let totalCallsToMake = 0;
+        let availableWatches = [];
+        let selectedWatch = null;
+
+        // Load available watches on page load
+        document.addEventListener('DOMContentLoaded', loadWatches);
+
+        async function loadWatches() {
+            try {
+                const response = await fetch('/api/watches');
+                const data = await response.json();
+                availableWatches = data.watches;
+
+                // Find and select the default watch
+                selectedWatch = availableWatches.find(w => w.reference === data.default) || availableWatches[0];
+
+                renderWatchTabs();
+                updateWatchDisplay();
+            } catch (error) {
+                console.error('Error loading watches:', error);
+            }
+        }
+
+        function renderWatchTabs() {
+            const tabsContainer = document.getElementById('watchTabs');
+            tabsContainer.innerHTML = availableWatches.map(watch => `
+                <button class="watch-tab ${watch.reference === selectedWatch.reference ? 'active' : ''}"
+                        onclick="selectWatch('${watch.reference}')">
+                    ${watch.dial.replace(' domed dial', '').replace(' Domed Dial', '')}
+                </button>
+            `).join('');
+        }
+
+        function selectWatch(reference) {
+            selectedWatch = availableWatches.find(w => w.reference === reference);
+            renderWatchTabs();
+            updateWatchDisplay();
+        }
+
+        function updateWatchDisplay() {
+            if (!selectedWatch) return;
+
+            document.getElementById('watchModel').textContent = `Tudor ${selectedWatch.model}`;
+            document.getElementById('watchReference').textContent = selectedWatch.reference;
+            document.getElementById('watchPrice').textContent = `$${selectedWatch.price.toLocaleString()}`;
+
+            // Update specs
+            const specsHtml = `
+                <span class="spec-tag">${selectedWatch.case_size}</span>
+                <span class="spec-tag">${selectedWatch.case_material.charAt(0).toUpperCase() + selectedWatch.case_material.slice(1)} Case</span>
+                <span class="spec-tag">${selectedWatch.dial}</span>
+            `;
+            document.getElementById('watchSpecs').innerHTML = specsHtml;
+
+            // Update image if available
+            if (selectedWatch.image) {
+                document.getElementById('watchImage').src = selectedWatch.image;
+            }
+            document.getElementById('watchImage').alt = selectedWatch.full_name;
+        }
 
         async function searchRetailers() {
             const zipCode = document.getElementById('zipCode').value;
@@ -923,7 +1016,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         retailer_name: retailer.name,
-                        phone: retailer.phone
+                        phone: retailer.phone,
+                        watch_reference: selectedWatch ? selectedWatch.reference : null
                     })
                 });
 

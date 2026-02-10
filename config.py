@@ -2,16 +2,33 @@
 Configuration for Tudor Watch Finder
 """
 
-# Target watch details
-WATCH_CONFIG = {
-    "model": "Ranger",
-    "reference": "M79930-0007",
-    "case_size": "36mm",
-    "case_material": "steel",
-    "dial": "Beige domed dial",
-    "price": 3775,
-    "full_name": "Tudor Ranger 36mm steel case with Beige domed dial"
+# Available watches - add new watches here
+WATCHES = {
+    "M79930-0007": {
+        "model": "Ranger",
+        "reference": "M79930-0007",
+        "case_size": "36mm",
+        "case_material": "steel",
+        "dial": "Beige domed dial",
+        "price": 3775,
+        "full_name": "Tudor Ranger 36mm steel case with Beige domed dial",
+        "image": "https://www.tudorwatch.com/-/media/model/ranger/m79930-0007.png"
+    },
+    "M79930-0001": {
+        "model": "Ranger",
+        "reference": "M79930-0001",
+        "case_size": "36mm",
+        "case_material": "steel",
+        "dial": "Black domed dial",
+        "price": 3700,
+        "full_name": "Tudor Ranger 36mm steel case with Black domed dial",
+        "image": "https://www.tudorwatch.com/-/media/model/ranger/m79930-0001.png"
+    }
 }
+
+# Default watch (for backward compatibility)
+DEFAULT_WATCH = "M79930-0007"
+WATCH_CONFIG = WATCHES[DEFAULT_WATCH]
 
 # Search parameters
 SEARCH_CONFIG = {
