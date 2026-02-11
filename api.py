@@ -381,7 +381,8 @@ def run_single_call_background(job_id: str, retailer_name: str, phone: str, api_
     try:
         watch = watch_config or WATCH_CONFIG
         print(f"[{job_id}] Starting background call to {retailer_name} at {phone}")
-        print(f"[{job_id}] Watch: {watch['full_name']}")
+        print(f"[{job_id}] Watch config received: {watch.get('dial', 'unknown')} ({watch.get('reference', 'unknown')})")
+        print(f"[{job_id}] Watch full_name: {watch['full_name']}")
         call_jobs[job_id]["status"] = "in_progress"
 
         # Create caller and make the call (this is synchronous and waits for completion)

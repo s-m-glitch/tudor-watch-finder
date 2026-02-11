@@ -72,6 +72,7 @@ class BlandAICaller:
             "Content-Type": "application/json"
         }
         self.watch_config = watch_config or WATCH_CONFIG
+        print(f"  [BlandAICaller] Initialized with watch: {self.watch_config.get('dial', 'unknown')} ({self.watch_config.get('reference', 'unknown')})")
 
     def _build_call_prompt(self) -> str:
         """Build the AI prompt for the phone call"""
@@ -112,7 +113,10 @@ CONVERSATION STYLE:
     def _build_call_task(self) -> str:
         """Build the specific task/goal for the call"""
         watch = self.watch_config
-        return f"Find out if the store has the Tudor {watch['model']} {watch['case_size']} with {watch['dial'].lower()} (ref: {watch['reference']}) in stock, and if not, ask about availability timeline or waitlist options."
+        task = f"Find out if the store has the Tudor {watch['model']} {watch['case_size']} with {watch['dial'].lower()} (ref: {watch['reference']}) in stock, and if not, ask about availability timeline or waitlist options."
+        print(f"  [TASK] Built task for: {watch['dial']} ({watch['reference']})")
+        print(f"  [TASK] Full task: {task}")
+        return task
 
     def make_call(self, phone_number: str, retailer_name: str) -> CallResult:
         """
@@ -145,7 +149,7 @@ CONVERSATION STYLE:
             "webhook": None,  # We'll poll for results instead
             "metadata": {
                 "retailer_name": retailer_name,
-                "watch_reference": WATCH_CONFIG['reference'],
+                "watch_reference": self.watch_config['reference'],
                 "timestamp": timestamp
             }
         }
@@ -471,7 +475,7 @@ CONVERSATION STYLE:
             "have the ranger", "have that watch",
             "confirmed that the watch is available",  # From Bland summary
             "watch is in stock", "model is available",
-            "dial in stock", "beige dial in stock",  # From Claude summary
+            "dial in stock",  # From Claude summary (works for any dial color)
             "they had the", "had the tudor", "had it in stock",
             "have the tudor", "has the tudor"
         ]
