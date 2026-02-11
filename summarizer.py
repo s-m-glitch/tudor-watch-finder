@@ -65,7 +65,7 @@ Summary:"""
 
 
 # Convenience function
-def summarize_transcript(transcript: str, retailer_name: str) -> str:
+def summarize_transcript(transcript: str, retailer_name: str, watch_name: str = None) -> str:
     """Quick function to summarize a transcript"""
     try:
         # Debug: check if env var is set
@@ -75,6 +75,9 @@ def summarize_transcript(transcript: str, retailer_name: str) -> str:
             print(f"  Key starts with: {api_key[:10]}...")
 
         summarizer = TranscriptSummarizer()
+        # Use provided watch_name or default
+        if watch_name:
+            return summarizer.summarize(transcript, retailer_name, watch_name)
         return summarizer.summarize(transcript, retailer_name)
     except ValueError as e:
         # No API key configured

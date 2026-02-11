@@ -397,7 +397,10 @@ def run_single_call_background(job_id: str, retailer_name: str, phone: str, api_
         if result.transcript and result.transcript.strip():
             print(f"[{job_id}] Generating summary with Claude for {retailer_name}...")
             try:
-                summary = summarize_transcript(result.transcript, retailer_name)
+                # Pass the watch name so Claude knows which watch was being asked about
+                watch_name = f"Tudor {watch['model']} {watch['case_size']} with {watch['dial'].lower()}"
+                print(f"[{job_id}] Watch name for summary: {watch_name}")
+                summary = summarize_transcript(result.transcript, retailer_name, watch_name)
                 print(f"[{job_id}] Summary generated: {summary[:100]}...")
             except Exception as sum_err:
                 print(f"[{job_id}] Error generating summary: {sum_err}")
