@@ -323,10 +323,13 @@ async def make_single_call(request: SingleCallRequest, background_tasks: Backgro
         raise HTTPException(status_code=400, detail="Bland AI API key not configured")
 
     # Get watch config - use specified reference or default
+    print(f"[API] Received watch_reference: {request.watch_reference}")
     watch_ref = request.watch_reference or DEFAULT_WATCH
     if watch_ref not in WATCHES:
+        print(f"[API] Watch ref '{watch_ref}' not in WATCHES, using default")
         watch_ref = DEFAULT_WATCH
     watch_config = WATCHES[watch_ref]
+    print(f"[API] Using watch: {watch_config['dial']} ({watch_ref})")
 
     try:
         # Create a unique job ID for this call

@@ -1012,13 +1012,16 @@
             }
 
             try {
+                const watchRef = selectedWatch ? selectedWatch.reference : null;
+                console.log('Making call with watch_reference:', watchRef, 'selectedWatch:', selectedWatch);
+
                 const response = await fetch('/api/call', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         retailer_name: retailer.name,
                         phone: retailer.phone,
-                        watch_reference: selectedWatch ? selectedWatch.reference : null
+                        watch_reference: watchRef
                     })
                 });
 
