@@ -242,10 +242,13 @@ async def cache_status():
 @app.get("/api/search")
 async def search_retailers(zip_code: str, radius: float = 50):
     """Search for retailers near a zip code (GET version)"""
+    print(f"[SEARCH] Request: zip_code={zip_code}, radius={radius}")
     try:
         retailers = get_retailers()
+        print(f"[SEARCH] Got {len(retailers)} total retailers from cache")
         filter = RetailerFilter()
         filtered = filter.filter_by_zip_code(retailers, zip_code, radius)
+        print(f"[SEARCH] Filtered to {len(filtered)} retailers within {radius} miles of {zip_code}")
 
         results = []
         for retailer, distance in filtered:
@@ -263,6 +266,7 @@ async def search_retailers(zip_code: str, radius: float = 50):
                 "has_website_scraper": website_stock_checker.has_scraper(retailer.name)
             })
 
+        print(f"[SEARCH] Returning {len(results)} retailers")
         return {
             "zip_code": zip_code,
             "radius": radius,
@@ -271,8 +275,12 @@ async def search_retailers(zip_code: str, radius: float = 50):
         }
 
     except ValueError as e:
+        print(f"[SEARCH] ValueError: {e}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        print(f"[SEARCH] Exception: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
 

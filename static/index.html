@@ -809,11 +809,19 @@
         }
 
         async function searchRetailers() {
-            const zipCode = document.getElementById('zipCode').value;
+            const zipCode = document.getElementById('zipCode').value.trim();
             const radius = document.getElementById('radius').value;
+
+            console.log('Search initiated - zip:', zipCode, 'radius:', radius);
 
             if (!zipCode) {
                 alert('Please enter a zip code');
+                return;
+            }
+
+            // Validate zip code format (5 digits)
+            if (!/^\d{5}$/.test(zipCode)) {
+                alert('Please enter a valid 5-digit zip code');
                 return;
             }
 
@@ -824,16 +832,27 @@
             document.getElementById('searchBtn').innerHTML = '<div class="loading-spinner"></div> Searching...';
 
             try {
+                console.log('Fetching from API...');
                 const response = await fetch(`/api/search?zip_code=${zipCode}&radius=${radius}`);
+                console.log('Response status:', response.status);
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || `Server error: ${response.status}`);
+                }
+
                 const data = await response.json();
+                console.log('Search results:', data);
 
                 if (data.error) {
                     throw new Error(data.error);
                 }
 
-                retailers = data.retailers;
+                retailers = data.retailers || [];
+                console.log('Found', retailers.length, 'retailers');
                 displayRetailers(retailers);
             } catch (error) {
+                console.error('Search error:', error);
                 alert('Error searching retailers: ' + error.message);
             } finally {
                 document.getElementById('loadingState').style.display = 'none';
@@ -842,16 +861,31 @@
             }
         }
 
-        function displayRetailers(retailers) {
+        function displayRetailers(newRetailers) {
+            console.log('displayRetailers called with', newRetailers.length, 'retailers');
+
             const resultsSection = document.getElementById('resultsSection');
             const retailerList = document.getElementById('retailerList');
             const resultsCount = document.getElementById('resultsCount');
             const callAllSection = document.getElementById('callAllSection');
 
-            resultsSection.style.display = 'block';
-            resultsCount.textContent = `${retailers.length} retailer${retailers.length !== 1 ? 's' : ''} found`;
+            // Clear previous results first
+            retailerList.innerHTML = '';
 
-            if (retailers.length === 0) {
+            // Reset call progress state
+            const callProgress = document.getElementById('callProgress');
+            if (callProgress) {
+                callProgress.style.display = 'none';
+            }
+
+            // Reset global stats
+            totalCallsToMake = 0;
+            callsInProgress = 0;
+
+            resultsSection.style.display = 'block';
+            resultsCount.textContent = `${newRetailers.length} retailer${newRetailers.length !== 1 ? 's' : ''} found`;
+
+            if (newRetailers.length === 0) {
                 retailerList.innerHTML = `
                     <div class="empty-state">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -866,31 +900,64 @@
             }
 
             // Show call options if there are retailers with phones
-            const retailersWithPhone = retailers.filter(r => r.phone);
+            const retailersWithPhone = newRetailers.filter(r => r.phone);
+            console.log('Retailers with phone:', retailersWithPhone.length);
             if (retailersWithPhone.length > 0) {
                 callAllSection.style.display = 'block';
-                // Reset progress
-                document.getElementById('callProgress').style.display = 'none';
+                // Reset call all section to initial state
+                callAllSection.innerHTML = `
+                    <h4>Check Inventory by Phone</h4>
+                    <p>Automatically call retailers to check if they have the Tudor Ranger in stock.</p>
+                    <div class="call-options">
+                        <button class="btn btn-secondary btn-small" onclick="callRetailers('all')">
+                            Let Tic Inquire at All Stores
+                        </button>
+                    </div>
+                    <div id="callProgress" style="display: none;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                        </div>
+                        <div class="call-stats">
+                            <div class="call-stat">
+                                <span class="call-stat-dot dot-in-stock"></span>
+                                <span id="inStockCount">0</span> In Stock
+                            </div>
+                            <div class="call-stat">
+                                <span class="call-stat-dot dot-out-of-stock"></span>
+                                <span id="outOfStockCount">0</span> Out of Stock
+                            </div>
+                            <div class="call-stat">
+                                <span class="call-stat-dot dot-unknown"></span>
+                                <span id="unknownCount">0</span> Unknown
+                            </div>
+                        </div>
+                    </div>
+                `;
             } else {
                 callAllSection.style.display = 'none';
             }
 
-            retailerList.innerHTML = retailers.map((retailer, index) => `
+            retailerList.innerHTML = newRetailers.map((retailer, index) => {
+                const distance = typeof retailer.distance === 'number' ? retailer.distance.toFixed(1) : '?';
+                return `
                 <div class="retailer-card" id="retailer-${index}">
                     <div class="retailer-header">
-                        <span class="retailer-name">${retailer.name}</span>
-                        <span class="retailer-distance">${retailer.distance.toFixed(1)} mi</span>
+                        <span class="retailer-name">${retailer.name || 'Unknown'}</span>
+                        <span class="retailer-distance">${distance} mi</span>
                     </div>
-                    <div class="retailer-address">${retailer.city}, ${retailer.state} ${retailer.zip_code}</div>
+                    <div class="retailer-address">${retailer.city || ''}, ${retailer.state || ''} ${retailer.zip_code || ''}</div>
                     ${retailer.phone ? `<a href="tel:${retailer.phone}" class="retailer-phone">${retailer.phone}</a>` : ''}
                     <div class="retailer-actions" id="actions-${index}">
                         ${getStockDisplay(retailer, index)}
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
+
+            console.log('Retailer cards rendered');
 
             // Auto-check website stock for retailers with scrapers
-            retailers.forEach((retailer, index) => {
+            newRetailers.forEach((retailer, index) => {
                 if (retailer.has_website_scraper) {
                     checkWebsiteStock(retailer.name, index);
                 }
