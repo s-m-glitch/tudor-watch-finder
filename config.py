@@ -12,7 +12,7 @@ WATCHES = {
         "dial": "Beige domed dial",
         "price": 3775,
         "full_name": "Tudor Ranger 36mm steel case with Beige domed dial",
-        "image": "/static/watch.png"
+        "image": "/static/watch-beige.png"
     },
     "M79930-0001": {
         "model": "Ranger",
