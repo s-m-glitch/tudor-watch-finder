@@ -801,7 +801,10 @@
             `;
             document.getElementById('watchSpecs').innerHTML = specsHtml;
 
-            // Keep using local image (external URLs don't work)
+            // Update image from config
+            if (selectedWatch.image) {
+                document.getElementById('watchImage').src = selectedWatch.image;
+            }
             document.getElementById('watchImage').alt = selectedWatch.full_name;
         }
 
