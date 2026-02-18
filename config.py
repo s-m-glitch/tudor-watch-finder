@@ -204,9 +204,9 @@ WATCHES = {
         "reference": "M28600-0001",
         "case_size": "41mm",
         "case_material": "steel",
-        "dial": "Black",
+        "dial": "Silver",
         "price": 3100,
-        "full_name": "Tudor Royal 41mm steel case with Black dial",
+        "full_name": "Tudor Royal 41mm steel case with Silver dial",
         "image": "/static/watch-black.png"
     },
     "M28600-0005": {
@@ -224,9 +224,9 @@ WATCHES = {
         "reference": "M28600-0006",
         "case_size": "41mm",
         "case_material": "steel",
-        "dial": "Silver",
+        "dial": "Blue",
         "price": 3100,
-        "full_name": "Tudor Royal 41mm steel case with Silver dial",
+        "full_name": "Tudor Royal 41mm steel case with Blue dial",
         "image": "/static/watch-black.png"
     },
     "M28500-0001": {
@@ -234,9 +234,9 @@ WATCHES = {
         "reference": "M28500-0001",
         "case_size": "38mm",
         "case_material": "steel",
-        "dial": "Black",
+        "dial": "Silver",
         "price": 2900,
-        "full_name": "Tudor Royal 38mm steel case with Black dial",
+        "full_name": "Tudor Royal 38mm steel case with Silver dial",
         "image": "/static/watch-black.png"
     },
     "M28500-0005": {
@@ -254,9 +254,9 @@ WATCHES = {
         "reference": "M28400-0001",
         "case_size": "34mm",
         "case_material": "steel",
-        "dial": "Black",
+        "dial": "Silver",
         "price": 2700,
-        "full_name": "Tudor Royal 34mm steel case with Black dial",
+        "full_name": "Tudor Royal 34mm steel case with Silver dial",
         "image": "/static/watch-black.png"
     },
     "M28400-0005": {
@@ -273,10 +273,10 @@ WATCHES = {
         "model": "Royal",
         "reference": "M28303-0001",
         "case_size": "28mm",
-        "case_material": "steel",
-        "dial": "Black",
+        "case_material": "steel and gold",
+        "dial": "Silver",
         "price": 2550,
-        "full_name": "Tudor Royal 28mm steel case with Black dial",
+        "full_name": "Tudor Royal 28mm steel and gold case with Silver dial",
         "image": "/static/watch-black.png"
     },
 
@@ -286,9 +286,9 @@ WATCHES = {
         "reference": "M91650-0001",
         "case_size": "41mm",
         "case_material": "steel",
-        "dial": "Black",
-        "price": 2650,
-        "full_name": "Tudor 1926 41mm steel case with Black dial",
+        "dial": "Silver",
+        "price": 2550,
+        "full_name": "Tudor 1926 41mm steel case with Silver dial",
         "image": "/static/watch-black.png"
     },
     "M91650-0004": {
@@ -296,9 +296,9 @@ WATCHES = {
         "reference": "M91650-0004",
         "case_size": "41mm",
         "case_material": "steel",
-        "dial": "Silver",
-        "price": 2650,
-        "full_name": "Tudor 1926 41mm steel case with Silver dial",
+        "dial": "Diamond-set",
+        "price": 3200,
+        "full_name": "Tudor 1926 41mm steel case with Diamond-set dial",
         "image": "/static/watch-black.png"
     },
     "M91550-0001": {
@@ -306,9 +306,9 @@ WATCHES = {
         "reference": "M91550-0001",
         "case_size": "39mm",
         "case_material": "steel",
-        "dial": "Black",
+        "dial": "Silver",
         "price": 2500,
-        "full_name": "Tudor 1926 39mm steel case with Black dial",
+        "full_name": "Tudor 1926 39mm steel case with Silver dial",
         "image": "/static/watch-black.png"
     },
     "M91550-0004": {
@@ -316,9 +316,9 @@ WATCHES = {
         "reference": "M91550-0004",
         "case_size": "39mm",
         "case_material": "steel",
-        "dial": "Silver",
-        "price": 2500,
-        "full_name": "Tudor 1926 39mm steel case with Silver dial",
+        "dial": "Diamond-set",
+        "price": 3150,
+        "full_name": "Tudor 1926 39mm steel case with Diamond-set dial",
         "image": "/static/watch-black.png"
     },
     "M91450-0001": {
@@ -326,9 +326,9 @@ WATCHES = {
         "reference": "M91450-0001",
         "case_size": "36mm",
         "case_material": "steel",
-        "dial": "Black",
-        "price": 2400,
-        "full_name": "Tudor 1926 36mm steel case with Black dial",
+        "dial": "Silver",
+        "price": 2425,
+        "full_name": "Tudor 1926 36mm steel case with Silver dial",
         "image": "/static/watch-black.png"
     },
     "M91450-0004": {
@@ -336,9 +336,9 @@ WATCHES = {
         "reference": "M91450-0004",
         "case_size": "36mm",
         "case_material": "steel",
-        "dial": "Silver",
-        "price": 2400,
-        "full_name": "Tudor 1926 36mm steel case with Silver dial",
+        "dial": "Diamond-set",
+        "price": 3075,
+        "full_name": "Tudor 1926 36mm steel case with Diamond-set dial",
         "image": "/static/watch-black.png"
     },
     "M91350-0001": {
@@ -346,9 +346,9 @@ WATCHES = {
         "reference": "M91350-0001",
         "case_size": "28mm",
         "case_material": "steel",
-        "dial": "Black",
-        "price": 2250,
-        "full_name": "Tudor 1926 28mm steel case with Black dial",
+        "dial": "Silver",
+        "price": 2325,
+        "full_name": "Tudor 1926 28mm steel case with Silver dial",
         "image": "/static/watch-black.png"
     },
     "M91350-0004": {
@@ -356,9 +356,9 @@ WATCHES = {
         "reference": "M91350-0004",
         "case_size": "28mm",
         "case_material": "steel",
-        "dial": "Silver",
-        "price": 2250,
-        "full_name": "Tudor 1926 28mm steel case with Silver dial",
+        "dial": "Diamond-set",
+        "price": 2975,
+        "full_name": "Tudor 1926 28mm steel case with Diamond-set dial",
         "image": "/static/watch-black.png"
     }
 }
