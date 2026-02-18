@@ -58,34 +58,43 @@
             border: 1px solid #e5e7eb;
         }
 
-        .watch-tabs {
-            display: flex;
-            gap: 8px;
+        .watch-selector {
             margin-bottom: 20px;
-            border-bottom: 1px solid #e5e7eb;
-            padding-bottom: 12px;
         }
 
-        .watch-tab {
-            padding: 8px 16px;
+        .watch-selector label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #6b7280;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .watch-selector select {
+            width: 100%;
+            padding: 12px 16px;
             border: 1px solid #e5e7eb;
             border-radius: 8px;
-            background: #f9fafb;
-            cursor: pointer;
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             font-family: 'JetBrains Mono', monospace;
-            transition: all 0.2s ease;
+            background: #ffffff;
+            color: #1a1a2e;
+            cursor: pointer;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            padding-right: 40px;
         }
 
-        .watch-tab:hover {
-            background: #f3f4f6;
-            border-color: #d1d5db;
-        }
-
-        .watch-tab.active {
-            background: #1a1a2e;
-            color: white;
-            border-color: #1a1a2e;
+        .watch-selector select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
         .watch-hero {
@@ -629,9 +638,12 @@
 
         <!-- Watch Hero Card -->
         <div class="card">
-            <!-- Watch Selector Tabs -->
-            <div class="watch-tabs" id="watchTabs">
-                <!-- Tabs will be dynamically inserted here -->
+            <!-- Watch Selector Dropdown -->
+            <div class="watch-selector">
+                <label>Select Watch</label>
+                <select id="watchSelect" onchange="selectWatch(this.value)">
+                    <!-- Options will be dynamically inserted here -->
+                </select>
             </div>
             <div class="watch-hero">
                 <div class="watch-image">
@@ -771,12 +783,11 @@
         }
 
         function renderWatchTabs() {
-            const tabsContainer = document.getElementById('watchTabs');
-            tabsContainer.innerHTML = availableWatches.map(watch => `
-                <button class="watch-tab ${watch.reference === selectedWatch.reference ? 'active' : ''}"
-                        onclick="selectWatch('${watch.reference}')">
-                    ${watch.dial.replace(' domed dial', '').replace(' Domed Dial', '')}
-                </button>
+            const selectEl = document.getElementById('watchSelect');
+            selectEl.innerHTML = availableWatches.map(watch => `
+                <option value="${watch.reference}" ${watch.reference === selectedWatch.reference ? 'selected' : ''}>
+                    ${watch.full_name}
+                </option>
             `).join('');
         }
 
