@@ -19,6 +19,7 @@ jobs:
       contents: write
       pull-requests: write
       issues: write
+      id-token: write
 
     steps:
       - name: Checkout repository
@@ -40,6 +41,4 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          model: "claude-sonnet-4-20250514"
-          allowed_tools: "Bash,Read,Edit,Write,Glob,Grep"
-          timeout_minutes: 30
+          claude_args: "--model claude-sonnet-4-20250514 --max-turns 30"
