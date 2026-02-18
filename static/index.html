@@ -797,6 +797,12 @@
             updateWatchDisplay();
         }
 
+        function getTudorImageUrl(reference) {
+            // Tudor CDN URL pattern: lowercase reference
+            const ref = reference.toLowerCase();
+            return `https://media.tudorwatch.com/image/upload/q_auto/f_auto/t_tdr-grid/c_limit,w_600/v1/tudorwatch/menu/catalogue/2025/upright-cb-with-drop-shadow/tudor-${ref}`;
+        }
+
         function updateWatchDisplay() {
             if (!selectedWatch) return;
 
@@ -812,11 +818,15 @@
             `;
             document.getElementById('watchSpecs').innerHTML = specsHtml;
 
-            // Update image from config
-            if (selectedWatch.image) {
-                document.getElementById('watchImage').src = selectedWatch.image;
-            }
-            document.getElementById('watchImage').alt = selectedWatch.full_name;
+            // Update image — try Tudor CDN first, fall back to local
+            const img = document.getElementById('watchImage');
+            img.alt = selectedWatch.full_name;
+            img.src = getTudorImageUrl(selectedWatch.reference);
+            img.onerror = function() {
+                // Fall back to local image if CDN fails
+                this.src = selectedWatch.image || '/static/watch.png';
+                this.onerror = null;
+            };
         }
 
         async function searchRetailers() {
