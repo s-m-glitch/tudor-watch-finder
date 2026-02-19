@@ -1179,69 +1179,14 @@
             }).join('');
 
             console.log('Retailer cards rendered');
-
-            // Auto-check website stock for retailers with scrapers
-            newRetailers.forEach((retailer, index) => {
-                if (retailer.has_website_scraper) {
-                    checkWebsiteStock(retailer.name, index);
-                }
-            });
-        }
-
-        async function checkWebsiteStock(retailerName, index) {
-            const webStock = document.getElementById(`webStock-${index}`);
-            if (!webStock) return;
-
-            // Show checking state
-            webStock.className = 'stock-status stock-unknown';
-            webStock.innerHTML = '<span class="stock-indicator"></span><span>Checking...</span>';
-
-            try {
-                const response = await fetch(`/api/website-stock/${encodeURIComponent(retailerName)}`);
-                const data = await response.json();
-
-                if (data.status === 'in_stock') {
-                    webStock.className = 'stock-status stock-in-stock';
-                    webStock.innerHTML = '<span class="stock-indicator"></span><span>In Stock!</span>';
-                } else if (data.status === 'out_of_stock') {
-                    webStock.className = 'stock-status stock-out-of-stock';
-                    webStock.innerHTML = '<span class="stock-indicator"></span><span>Out of Stock</span>';
-                } else if (data.status === 'call_for_availability') {
-                    webStock.className = 'stock-status stock-unknown';
-                    webStock.innerHTML = '<span class="stock-indicator"></span><span>Call to Confirm</span>';
-                } else {
-                    webStock.className = 'stock-status stock-unknown';
-                    webStock.innerHTML = '<span class="stock-indicator"></span><span>Unknown</span>';
-                }
-            } catch (error) {
-                webStock.className = 'stock-status stock-unknown';
-                webStock.innerHTML = '<span class="stock-indicator"></span><span>Check Failed</span>';
-            }
         }
 
         function getStockDisplay(retailer, index) {
-            // Website status: "Checking..." if scraper available, "N/A" otherwise
-            // Phone status: populated after Tic makes a call
-
-            const websiteStatusHtml = retailer.has_website_scraper
-                ? `<div class="stock-status stock-unknown" id="webStock-${index}">
-                       <span class="stock-indicator"></span>
-                       <span>Checking...</span>
-                   </div>`
-                : `<div class="stock-status stock-unknown" id="webStock-${index}">
-                       <span class="stock-indicator"></span>
-                       <span>N/A</span>
-                   </div>`;
-
             if (!retailer.phone) {
                 return `
                     <div class="status-group">
                         <div class="status-item">
-                            <span class="status-label">Website</span>
-                            ${websiteStatusHtml}
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">Phone</span>
+                            <span class="status-label">Status</span>
                             <div class="stock-status stock-unknown">
                                 <span class="stock-indicator"></span>
                                 <span>No phone available</span>
@@ -1254,11 +1199,7 @@
             return `
                 <div class="status-group">
                     <div class="status-item">
-                        <span class="status-label">Website</span>
-                        ${websiteStatusHtml}
-                    </div>
-                    <div class="status-item">
-                        <span class="status-label">Phone</span>
+                        <span class="status-label">Status</span>
                         <div class="stock-status stock-unknown" id="phoneStock-${index}">
                             <span class="stock-indicator"></span>
                             <span>Not called</span>
