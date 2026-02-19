@@ -72,7 +72,12 @@
             letter-spacing: 0.5px;
         }
 
-        .watch-selector select {
+        .watch-dropdown {
+            position: relative;
+            width: 100%;
+        }
+
+        .watch-dropdown-toggle {
             width: 100%;
             padding: 12px 16px;
             border: 1px solid #e5e7eb;
@@ -83,18 +88,130 @@
             color: #1a1a2e;
             cursor: pointer;
             transition: border-color 0.2s, box-shadow 0.2s;
-            appearance: none;
-            -webkit-appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 16px center;
-            padding-right: 40px;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
         }
 
-        .watch-selector select:focus {
+        .watch-dropdown-toggle:focus,
+        .watch-dropdown.open .watch-dropdown-toggle {
             outline: none;
             border-color: #3b82f6;
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .watch-dropdown-toggle .toggle-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+        }
+
+        .watch-dropdown-toggle .toggle-arrow {
+            flex-shrink: 0;
+            transition: transform 0.2s;
+            color: #6b7280;
+        }
+
+        .watch-dropdown.open .toggle-arrow {
+            transform: rotate(180deg);
+        }
+
+        .watch-dropdown-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            z-index: 100;
+            max-height: 340px;
+            overflow: hidden;
+            flex-direction: column;
+        }
+
+        .watch-dropdown.open .watch-dropdown-menu {
+            display: flex;
+        }
+
+        .watch-dropdown-search {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e5e7eb;
+            flex-shrink: 0;
+        }
+
+        .watch-dropdown-search input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+            background: #f9fafb;
+            color: #1a1a2e;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .watch-dropdown-search input:focus {
+            border-color: #3b82f6;
+            background: #ffffff;
+        }
+
+        .watch-dropdown-search input::placeholder {
+            color: #9ca3af;
+        }
+
+        .watch-dropdown-list {
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .watch-dropdown-item {
+            padding: 10px 14px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+            color: #374151;
+            transition: background 0.1s;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .watch-dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .watch-dropdown-item:hover {
+            background: #f0f4ff;
+        }
+
+        .watch-dropdown-item.selected {
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-weight: 600;
+        }
+
+        .watch-dropdown-item .item-ref {
+            font-size: 0.7rem;
+            color: #9ca3af;
+            margin-top: 2px;
+        }
+
+        .watch-dropdown-item.selected .item-ref {
+            color: #60a5fa;
+        }
+
+        .watch-dropdown-empty {
+            padding: 20px 14px;
+            text-align: center;
+            color: #9ca3af;
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
         }
 
         .watch-hero {
@@ -641,9 +758,20 @@
             <!-- Watch Selector Dropdown -->
             <div class="watch-selector">
                 <label>Select Watch</label>
-                <select id="watchSelect" onchange="selectWatch(this.value)">
-                    <!-- Options will be dynamically inserted here -->
-                </select>
+                <div class="watch-dropdown" id="watchDropdown">
+                    <button type="button" class="watch-dropdown-toggle" id="watchDropdownToggle" onclick="toggleWatchDropdown()">
+                        <span class="toggle-text" id="watchDropdownText">Loading watches...</span>
+                        <svg class="toggle-arrow" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </button>
+                    <div class="watch-dropdown-menu">
+                        <div class="watch-dropdown-search">
+                            <input type="text" id="watchSearchInput" placeholder="Search by name, model, or ref..." oninput="filterWatchDropdown(this.value)">
+                        </div>
+                        <div class="watch-dropdown-list" id="watchDropdownList">
+                            <!-- Options rendered dynamically -->
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="watch-hero">
                 <div class="watch-image">
@@ -783,11 +911,27 @@
         }
 
         function renderWatchTabs() {
-            const selectEl = document.getElementById('watchSelect');
-            selectEl.innerHTML = availableWatches.map(watch => `
-                <option value="${watch.reference}" ${watch.reference === selectedWatch.reference ? 'selected' : ''}>
-                    ${watch.full_name}
-                </option>
+            // Update toggle button text
+            const toggleText = document.getElementById('watchDropdownText');
+            if (selectedWatch) {
+                toggleText.textContent = selectedWatch.full_name;
+            }
+            // Render the full list (no filter)
+            renderWatchDropdownList(availableWatches);
+        }
+
+        function renderWatchDropdownList(watches) {
+            const listEl = document.getElementById('watchDropdownList');
+            if (watches.length === 0) {
+                listEl.innerHTML = '<div class="watch-dropdown-empty">No watches found</div>';
+                return;
+            }
+            listEl.innerHTML = watches.map(watch => `
+                <div class="watch-dropdown-item ${selectedWatch && watch.reference === selectedWatch.reference ? 'selected' : ''}"
+                     onclick="selectWatch('${watch.reference}')">
+                    <div>${watch.full_name}</div>
+                    <div class="item-ref">${watch.reference}</div>
+                </div>
             `).join('');
         }
 
@@ -795,7 +939,61 @@
             selectedWatch = availableWatches.find(w => w.reference === reference);
             renderWatchTabs();
             updateWatchDisplay();
+            closeWatchDropdown();
         }
+
+        function toggleWatchDropdown() {
+            const dropdown = document.getElementById('watchDropdown');
+            if (dropdown.classList.contains('open')) {
+                closeWatchDropdown();
+            } else {
+                openWatchDropdown();
+            }
+        }
+
+        function openWatchDropdown() {
+            const dropdown = document.getElementById('watchDropdown');
+            const searchInput = document.getElementById('watchSearchInput');
+            dropdown.classList.add('open');
+            searchInput.value = '';
+            renderWatchDropdownList(availableWatches);
+            // Focus search input after a brief delay so the menu renders first
+            setTimeout(() => searchInput.focus(), 50);
+            // Scroll selected item into view
+            setTimeout(() => {
+                const selected = dropdown.querySelector('.watch-dropdown-item.selected');
+                if (selected) selected.scrollIntoView({ block: 'nearest' });
+            }, 60);
+        }
+
+        function closeWatchDropdown() {
+            const dropdown = document.getElementById('watchDropdown');
+            dropdown.classList.remove('open');
+        }
+
+        function filterWatchDropdown(query) {
+            const q = query.toLowerCase().trim();
+            if (!q) {
+                renderWatchDropdownList(availableWatches);
+                return;
+            }
+            const filtered = availableWatches.filter(w =>
+                w.full_name.toLowerCase().includes(q) ||
+                w.reference.toLowerCase().includes(q) ||
+                w.model.toLowerCase().includes(q) ||
+                (w.dial && w.dial.toLowerCase().includes(q)) ||
+                (w.case_material && w.case_material.toLowerCase().includes(q))
+            );
+            renderWatchDropdownList(filtered);
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            const dropdown = document.getElementById('watchDropdown');
+            if (dropdown && !dropdown.contains(e.target)) {
+                closeWatchDropdown();
+            }
+        });
 
         // All 240 watch refs have verified CDN images as of Feb 2026.
         // CDN URL pattern works for all refs in the catalog.
