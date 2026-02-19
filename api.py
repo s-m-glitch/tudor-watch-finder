@@ -152,18 +152,6 @@ def load_retailers_sync() -> List[Retailer]:
         print(f"Loaded {len(retailers)} retailers from bundled JSON")
         print(f"  - With phone numbers: {sum(1 for r in retailers if r.phone)}")
         print(f"  - With coordinates: {sum(1 for r in retailers if r.latitude)}")
-
-        # Geocode any retailers missing coordinates
-        from scraper import ZipCodeGeocoder
-        missing_coords = [r for r in retailers if not r.latitude and r.zip_code]
-        if missing_coords:
-            print(f"  - Geocoding {len(missing_coords)} retailers missing coordinates...")
-            for r in missing_coords:
-                coords = ZipCodeGeocoder.geocode(r.zip_code)
-                if coords:
-                    r.latitude, r.longitude = coords
-            print(f"  - After geocoding: {sum(1 for r in retailers if r.latitude)} with coordinates")
-
         return retailers
     else:
         # Fallback to live scraping if JSON not found
@@ -172,6 +160,27 @@ def load_retailers_sync() -> List[Retailer]:
         retailers = scraper.scrape_all_retailers(max_workers=5)
         print(f"Scrape complete: {len(retailers)} retailers found")
         return retailers
+
+
+def geocode_retailers_background(retailers: List[Retailer]):
+    """Geocode retailers missing coordinates in a background thread."""
+    from filter import ZipCodeGeocoder
+    missing = [r for r in retailers if not r.latitude and r.zip_code]
+    if not missing:
+        return
+    print(f"[GEOCODE] Background geocoding {len(missing)} retailers...")
+    success = 0
+    for r in missing:
+        try:
+            geocoder = ZipCodeGeocoder()
+            location = geocoder.geocode(r.zip_code)
+            if location:
+                r.latitude = location.latitude
+                r.longitude = location.longitude
+                success += 1
+        except Exception:
+            pass
+    print(f"[GEOCODE] Done: {success}/{len(missing)} geocoded")
 
 
 def get_retailers() -> List[Retailer]:
@@ -221,11 +230,14 @@ async def startup_event():
     print("=" * 60)
     print("Tudor Watch Finder API Starting")
     print("=" * 60)
-    # Pre-load retailers from bundled JSON on startup
+    # Pre-load retailers from bundled JSON on startup (instant — no network calls)
     try:
         retailers = load_retailers_sync()
         retailer_cache.set_retailers(retailers)
         print(f"Pre-loaded {len(retailers)} retailers on startup")
+        # Geocode missing coordinates in background thread (doesn't block healthcheck)
+        geo_thread = threading.Thread(target=geocode_retailers_background, args=(retailers,), daemon=True)
+        geo_thread.start()
     except Exception as e:
         print(f"WARNING: Failed to pre-load retailers: {e}")
         print("Retailers will be loaded on first search request")
