@@ -141,14 +141,37 @@ class SingleCallRequest(BaseModel):
 # Helper Functions
 # ============================================================
 def load_retailers_sync() -> List[Retailer]:
-    """Synchronously load/scrape retailers"""
-    print("Starting retailer scrape...")
-    scraper = TudorScraper()
-    retailers = scraper.scrape_all_retailers(max_workers=5)
-    print(f"Scrape complete: {len(retailers)} retailers found")
-    print(f"  - With phone numbers: {sum(1 for r in retailers if r.phone)}")
-    print(f"  - With coordinates: {sum(1 for r in retailers if r.latitude)}")
-    return retailers
+    """Load retailers from bundled JSON file (pre-scraped data)"""
+    json_path = os.path.join(os.path.dirname(__file__), "retailers.json")
+    print(f"Loading retailers from {json_path}...")
+
+    if os.path.exists(json_path):
+        with open(json_path, 'r') as f:
+            data = json.load(f)
+        retailers = [Retailer(**r) for r in data]
+        print(f"Loaded {len(retailers)} retailers from bundled JSON")
+        print(f"  - With phone numbers: {sum(1 for r in retailers if r.phone)}")
+        print(f"  - With coordinates: {sum(1 for r in retailers if r.latitude)}")
+
+        # Geocode any retailers missing coordinates
+        from scraper import ZipCodeGeocoder
+        missing_coords = [r for r in retailers if not r.latitude and r.zip_code]
+        if missing_coords:
+            print(f"  - Geocoding {len(missing_coords)} retailers missing coordinates...")
+            for r in missing_coords:
+                coords = ZipCodeGeocoder.geocode(r.zip_code)
+                if coords:
+                    r.latitude, r.longitude = coords
+            print(f"  - After geocoding: {sum(1 for r in retailers if r.latitude)} with coordinates")
+
+        return retailers
+    else:
+        # Fallback to live scraping if JSON not found
+        print("WARNING: retailers.json not found, falling back to live scraping...")
+        scraper = TudorScraper()
+        retailers = scraper.scrape_all_retailers(max_workers=5)
+        print(f"Scrape complete: {len(retailers)} retailers found")
+        return retailers
 
 
 def get_retailers() -> List[Retailer]:
@@ -198,7 +221,14 @@ async def startup_event():
     print("=" * 60)
     print("Tudor Watch Finder API Starting")
     print("=" * 60)
-    print("Retailers will be loaded on first search request")
+    # Pre-load retailers from bundled JSON on startup
+    try:
+        retailers = load_retailers_sync()
+        retailer_cache.set_retailers(retailers)
+        print(f"Pre-loaded {len(retailers)} retailers on startup")
+    except Exception as e:
+        print(f"WARNING: Failed to pre-load retailers: {e}")
+        print("Retailers will be loaded on first search request")
 
 
 @app.get("/", response_class=HTMLResponse)
